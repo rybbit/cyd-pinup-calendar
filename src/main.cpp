@@ -1,9 +1,13 @@
 // Pin-Up Calendar for the ESP32-2432S028R "Cheap Yellow Display"
 //
-// Calendar page:  tap < / > in the red bar to change month, the month name for the big
-//                 full-screen calendar, the picture to see it full screen, a day to see its
-//                 holidays, the bottom line to jump back to today. The marketing block opens
-//                 the calendar picker when env=dev, the big calendar otherwise.
+// Calendar page:  tap < / > in the red bar to change month, the picture to see it full
+//                 screen, a day to see its holidays, the bottom line to jump back to today.
+//
+//                 Taps on the month name and the marketing block:
+//                                            env=prod          env=dev
+//                   tap month name           big calendar      big calendar
+//                   tap marketing block      big calendar      calendar picker
+//                   long press either        calendar picker   calendar picker
 // Boot:           hold a finger/stylus on the screen while "Hold to recalibrate" is shown
 //                 to redo touch calibration.
 //
@@ -317,18 +321,38 @@ void handleMenuTap(int16_t x, int16_t y) {
   }
 }
 
+// After a tap lands: true if the finger/stylus stays down for `ms` (a long press),
+// false if it lifts first. On a long press it waits for the release, so the release
+// isn't read as a new tap on the next screen.
+bool longPress(uint32_t ms = 700) {
+  uint32_t start = millis(), lastDown = millis();
+  int16_t x, y;
+  while (millis() - lastDown < 80) {  // released = no contact for 80 ms (resistive panels flicker)
+    if (Touch::read(x, y)) lastDown = millis();
+    if (millis() - start >= ms) {
+      Touch::waitRelease();
+      return true;
+    }
+    delay(10);
+  }
+  return false;
+}
+
 void handleCalendarTap(int16_t x, int16_t y) {
   int day;
   switch (UI::hitCalendar(x, y, viewY, viewM, day)) {
     case UI::HIT_PREV: changeMonth(-1); break;
     case UI::HIT_NEXT: changeMonth(+1); break;
-    case UI::HIT_TITLE: showBigCalendar(); break;
+    case UI::HIT_TITLE:  // tap: big calendar; long press: calendar picker
+      if (longPress()) openMenu(true);
+      else showBigCalendar();
+      break;
     case UI::HIT_IMAGE:
       screen = SCR_FULL;
       UI::drawFullImage(series, currentMeta(), viewY, viewM);
       break;
-    case UI::HIT_AD:  // the marketing block: the picker in dev, the big calendar in prod
-      if (settings.isDev()) openMenu(true);
+    case UI::HIT_AD:  // marketing block: long press (or any tap in dev) opens the picker
+      if (settings.isDev() || longPress()) openMenu(true);
       else showBigCalendar();
       break;
     case UI::HIT_DAY: selectDay(day); break;

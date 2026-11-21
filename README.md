@@ -9,7 +9,7 @@ You pick a calendar series (Dogs, Guns, Bikinis, and any you add). Each series h
 │     pin-up art     │  of a 240x320 image, tap for full screen)
 │   Miss November    │
 ├────────────────────┤
-│ ◀  NOVEMBER 2026 ▶ │  tap arrows: prev/next month · tap title: big full-screen calendar
+│ ◀  NOVEMBER 2026 ▶ │  tap arrows: prev/next month · tap title: big calendar · hold: picker
 │ S  M  T  W  T  F  S│
 │ 1• 2  3• 4  5  6  7│  red pill = federal holiday / observed day off
 │ 8  9 10 (11)12 13 14│  blue dot = observance (Halloween, Mother's Day…)
@@ -85,13 +85,21 @@ You need a FAT32 microSD card. Calendars are stored in `/calendar/<calendar-id>/
 
    The boot log lists the values it read and flags any unrecognized key, which helps catch typos.
 
-   **`env`** (optional, `dev` or `prod`; default prod):
-   - `env=dev`: tapping the advertising block opens the calendar picker (the only way into the picker and SETUP). If organization, address1, address2 and contact are all blank, the block shows the project name `cyd-pinup-calendar` (in the large organization font) and the developer contact instead. These are set by `DEV_ORGANIZATION` / `DEV_CONTACT` in `platformio.ini`.
-   - `env=prod`: tapping the block opens the big calendar, like the month name does, and an all-blank block takes no space. There's no way into the picker or SETUP, so the board stays on its calendar. To unlock it, set `env=dev` in `config.txt` on the card.
+   **`env`** (optional, `dev` or `prod`; default prod) controls taps on the month name and the advertising block:
+
+   | On the calendar page | env=prod | env=dev |
+   |---|---|---|
+   | Tap month name | big calendar | big calendar |
+   | Tap advertising block | big calendar | calendar picker |
+   | Long press (~0.7 s) month name | calendar picker | calendar picker |
+   | Long press (~0.7 s) advertising block | calendar picker | calendar picker |
+   | Tap picture | full-screen picture | full-screen picture |
+
+   With `env=dev`, if organization, address1, address2 and contact are all blank, the block shows the project name `cyd-pinup-calendar` (in the large organization font) and the developer contact instead. These are set by `DEV_ORGANIZATION` / `DEV_CONTACT` in `platformio.ini`. With `env=prod`, an all-blank block takes no space.
 
    **Big calendar.** Tapping the month name shows the month filling the whole screen, with large numbers and the holidays cycling along the bottom. ◀ ▶ change month and tapping a day shows its holidays. Tap the month name or the bottom line to go back.
 
-   **Editing on the device** (env=dev). Open the picker (tap the advertising block) and tap **SETUP**. Every value is listed; tap one to change it:
+   **Editing on the device.** Open the picker (long-press the month name) and tap **SETUP**. Every value is listed; tap one to change it:
    - **Wi-Fi:** scans nearby networks, then asks for the password. **TYPE NAME** handles hidden networks.
    - **Time zone:** pick a US zone, or **CUSTOM** for a POSIX string.
    - **Env:** choose dev or prod.
