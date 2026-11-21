@@ -69,16 +69,16 @@ You need a FAT32 microSD card. Calendars are stored in `/calendar/<calendar-id>/
    organization=MODERN ENGINEERING CO.
    address1=3555 SCOTT AVENUE
    address2=ST. LOUIS, MO 63103
-   phone=PHONE: JEFFERSON 3-3100
+   contact=PHONE: JEFFERSON 3-3100
    motto=Everything For Welding
    ```
 
-   Every line is optional and takes up space only when it's set; the picture grows to fill whatever is left. `company` works in place of `organization`, and `ad_`-prefixed names like `ad_company` work too. With none set, the page uses the classic layout.
+   Every line is optional and takes up space only when it's set; the picture grows to fill whatever is left. `company` works in place of `organization`, `contact` can hold a phone number, email or website (`phone` and `email` also work as the key), and `ad_`-prefixed names like `ad_company` work too. With none set, the page uses the classic layout.
 
    When set, the fields appear like this:
    - organization: large, bold
    - the two address lines: side by side, small
-   - phone: medium
+   - contact: medium, centered below the address
    - motto: navy italic under the calendar
 
    The calendar rows get a little shorter to make room. Long text drops to a smaller font automatically; keep the two address lines to about 38 characters combined. With a motto, tapping a day shows its holidays in the motto line for a few seconds. Without one, the bottom line cycles the edition title and holidays as usual.

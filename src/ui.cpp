@@ -18,7 +18,7 @@ int HDR_Y = 170, HDR_H = 24;
 int DOW_Y = 194, DOW_H = 12;
 int GRID_Y = 206, ROW_H = 17;
 int STATUS_Y = 308, STATUS_H = 12;
-int COMPANY_CY = 0, ADDR_CY = 0, PHONE_CY = 0;  // ad line centers, relative to AD_Y
+int COMPANY_CY = 0, ADDR_CY = 0, CONTACT_CY = 0;  // ad line centers, relative to AD_Y
 bool mottoLine = false;
 const int CLASSIC_IMG_H = 170;  // crop_y values in calendar.json are tuned for this window
 }  // namespace
@@ -260,16 +260,16 @@ void drawGrid(int year, int month, const DateYMD &today, int selDay) {
 void configureLayout() {
   bool company = settings.adCompany.length();
   bool addr = settings.adAddress1.length() || settings.adAddress2.length();
-  bool phone = settings.adPhone.length();
+  bool contact = settings.adContact.length();
   mottoLine = settings.adMotto.length();
-  bool any = company || addr || phone || mottoLine;
+  bool any = company || addr || contact || mottoLine;
 
   int y = 0;
-  if (company || addr || phone) {
+  if (company || addr || contact) {
     y = 2;
     if (company) { COMPANY_CY = y + 9; y += 18; }
     if (addr) { ADDR_CY = y + 5; y += 10; }
-    if (phone) { PHONE_CY = y + 7; y += 14; }
+    if (contact) { CONTACT_CY = y + 7; y += 14; }
     y += 2;
   }
   AD_H = y;
@@ -290,7 +290,7 @@ void configureLayout() {
 
 bool mottoMode() { return mottoLine; }
 
-// Company name (large), the two address lines side by side (small), phone (medium).
+// Company name (large), the two address lines side by side (small), contact (medium).
 static void drawAd() {
   tft.fillRect(0, AD_Y, SCREEN_W, AD_H, PAPER);
   tft.drawFastHLine(0, AD_Y, SCREEN_W, GRIDLINE);
@@ -304,7 +304,7 @@ static void drawAd() {
     tft.setTextDatum(MC_DATUM);
     tft.drawString(addr, SCREEN_W / 2, AD_Y + ADDR_CY, 1);
   }
-  if (settings.adPhone.length()) drawFitted(settings.adPhone, SCREEN_W / 2, AD_Y + PHONE_CY, nullptr);
+  if (settings.adContact.length()) drawFitted(settings.adContact, SCREEN_W / 2, AD_Y + CONTACT_CY, nullptr);
 }
 
 void drawMotto() {
