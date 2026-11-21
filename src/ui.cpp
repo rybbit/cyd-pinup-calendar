@@ -280,7 +280,10 @@ void drawMenu(const MenuState &s) {
     tft.drawString(sub, 8, y + 22, 1);
     // status badge
     tft.setTextDatum(MR_DATUM);
-    if (e.downloaded) {
+    if (e.updateAvailable() && s.online) {
+      tft.setTextColor(RED);
+      tft.drawString("UPDATE", SCREEN_W - 8, y + MENU_ROW_H / 2, 1);
+    } else if (e.downloaded) {
       tft.setTextColor(BLUE);
       tft.drawString("SAVED", SCREEN_W - 8, y + MENU_ROW_H / 2, 1);
     } else {
@@ -333,8 +336,8 @@ void drawMessage(const String &title, const String &l1, const String &l2, const 
     if (lines[i]->length()) tft.drawString(*lines[i], SCREEN_W / 2, 120 + i * 26, 2);
 }
 
-void drawProgress(const String &title, const String &what, int done, int total) {
-  if (done == 0) drawMessage("DOWNLOADING", title, what);
+void drawProgress(const String &title, const String &what, int done, int total, const char *heading) {
+  if (done == 0) drawMessage(heading, title, what);
   int x = 20, y = 220, w = SCREEN_W - 40, h = 18;
   tft.drawRect(x, y, w, h, INK);
   int fill = total > 0 ? (w - 4) * done / total : 0;

@@ -174,20 +174,38 @@ void wifiSetup() {
   }
 }
 
+bool fetchCalendar(const CatalogEntry &e) {
+  String what = e.category;
+  if (e.year) what += " " + String(e.year);
+  const char *heading = e.downloaded ? "UPDATING" : "DOWNLOADING";
+  return Store::downloadCalendar(e, [&](int done, int total) { UI::drawProgress(e.title, what, done, total, heading); });
+}
+
+// If GitHub has a newer version of the selected calendar, download the changed images
+// and reload it, keeping the month being viewed. Returns true if it updated.
+bool updateSelectedCalendar() {
+  if (!haveMeta || !Net::online()) return false;
+  CatalogEntry e;
+  if (!Store::findEntry(meta.id, e) || !e.updateAvailable()) return false;
+  Serial.printf("Updating %s: %s -> %s\n", e.id.c_str(), e.localVersion.c_str(), e.version.c_str());
+  bool ok = fetchCalendar(e);
+  int y = viewY, m = viewM;
+  if (ok && loadCalendar(e.id)) {
+    viewY = y;
+    viewM = m;
+  }
+  return true;  // screen was replaced by the progress view either way
+}
+
 void pickCalendar(const CatalogEntry &e) {
-  if (!e.downloaded) {
+  if (!e.downloaded || (e.updateAvailable() && Net::online())) {
     if (!Net::online()) {
       UI::drawMessage("OFFLINE", "Connect Wi-Fi to download", e.title);
       delay(2000);
       openMenu(false);
       return;
     }
-    bool ok = Store::downloadCalendar(e, [&](int done, int total) {
-      String what = e.category;
-      if (e.year) what += " " + String(e.year);
-      UI::drawProgress(e.title, what, done, total);
-    });
-    if (!ok) {
+    if (!fetchCalendar(e) && !e.downloaded) {
       UI::drawMessage("DOWNLOAD FAILED", e.title, "Check Wi-Fi and try again.", "Saved images are kept.");
       delay(2500);
       openMenu(true);
@@ -237,6 +255,8 @@ void handleMenuTap(int16_t x, int16_t y) {
         if (!Store::refreshCatalog()) {
           UI::drawMessage("SYNC FAILED", "Could not download", "catalog.json", "Check catalog= in wifi.conf");
           delay(2500);
+        } else {
+          updateSelectedCalendar();
         }
         openMenu(true);
       }
@@ -268,6 +288,15 @@ void handleCalendarTap(int16_t x, int16_t y) {
       break;
     default: break;
   }
+}
+
+// Every 6 hours, look for a newer catalog and update the selected calendar.
+void checkForUpdates() {
+  static uint32_t last = millis();
+  if (millis() - last < 6UL * 3600 * 1000 || screen != SCR_CAL) return;
+  last = millis();
+  if (!Net::online() && !Net::connect()) return;
+  if (Store::refreshCatalog() && updateSelectedCalendar()) showCalendar();
 }
 
 void checkDateChange() {
@@ -325,8 +354,10 @@ void setup() {
   }
   today = getToday();
 
-  if (!settings.calId.isEmpty() && loadCalendar(settings.calId))
+  if (!settings.calId.isEmpty() && loadCalendar(settings.calId)) {
+    updateSelectedCalendar();
     showCalendar();
+  }
   else
     openMenu(true);
 }
@@ -341,6 +372,7 @@ void loop() {
     }
   }
   checkDateChange();
+  checkForUpdates();
   if (screen == SCR_CAL) updateStatus();
   delay(10);
 }

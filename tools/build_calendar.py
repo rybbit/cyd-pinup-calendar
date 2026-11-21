@@ -10,11 +10,18 @@
 Writes content/calendars/<id>/01.jpg..12.jpg + calendar.json and adds/updates the
 entry in content/catalog.json. Commit and push content/ and every CYD can pick it up.
 
+Each calendar gets a "version" (in catalog.json and calendar.json) and each month a
+"sha" fingerprint of its image. The CYD compares them with its SD copy and downloads
+only what changed. After hand-editing a calendar.json or swapping a jpg, run
+    python3 tools/build_calendar.py --restamp
+to refresh the fingerprints and versions.
+
 Each image becomes a 240x320 baseline JPEG (the decoder on the ESP32 cannot read
 progressive JPEGs). The calendar page shows a 240x170 window of it; per-month
 "crop_y" in calendar.json (0..150) picks which rows show. Requires Pillow.
 """
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -62,18 +69,43 @@ def write_calendar(cal_id, title, category, year, images, captions, focus, crops
 
     meta = {"id": cal_id, "title": title, "category": category, "year": year, "months": months}
     (out / "calendar.json").write_text(json.dumps(meta, indent=2) + "\n")
+    stamp(out)
+    print(f"Wrote {out} and updated {CONTENT / 'catalog.json'}")
+
+
+def file_sha(path: Path) -> str:
+    return hashlib.sha1(path.read_bytes()).hexdigest()[:12]
+
+
+def stamp(cal_dir: Path) -> str:
+    """Write per-month image fingerprints and a calendar version, and sync the catalog entry."""
+    meta_path = cal_dir / "calendar.json"
+    meta = json.loads(meta_path.read_text())
+    for i, m in enumerate(meta["months"]):
+        m["sha"] = file_sha(cal_dir / f"{i + 1:02d}.jpg")
+    basis = {k: meta[k] for k in ("title", "category", "year", "months")}
+    meta["version"] = hashlib.sha1(json.dumps(basis, sort_keys=True).encode()).hexdigest()[:12]
+    meta_path.write_text(json.dumps(meta, indent=2) + "\n")
 
     catalog_path = CONTENT / "catalog.json"
     catalog = json.loads(catalog_path.read_text()) if catalog_path.exists() else {"format": 1, "calendars": []}
-    entry = {"id": cal_id, "title": title, "category": category, "year": year}
-    catalog["calendars"] = [c for c in catalog["calendars"] if c["id"] != cal_id] + [entry]
+    entry = {"id": meta["id"], "title": meta["title"], "category": meta["category"], "year": meta["year"],
+             "version": meta["version"]}
+    catalog["calendars"] = [c for c in catalog["calendars"] if c["id"] != meta["id"]] + [entry]
     catalog["calendars"].sort(key=lambda c: (c["category"], -c.get("year", 0), c["title"]))
     catalog_path.write_text(json.dumps(catalog, indent=2) + "\n")
-    print(f"Wrote {out} and updated {catalog_path}")
+    return meta["version"]
+
+
+def restamp_all():
+    for cal_dir in sorted((CONTENT / "calendars").iterdir()):
+        if (cal_dir / "calendar.json").exists():
+            print(f"{cal_dir.name}: version {stamp(cal_dir)}")
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--restamp", action="store_true", help="refresh versions of every calendar in content/")
     ap.add_argument("--id", required=True, help="folder name, e.g. dogs-2027")
     ap.add_argument("--title", required=True)
     ap.add_argument("--category", required=True, help="e.g. Dogs, Guns, Bikinis")
@@ -81,6 +113,9 @@ def main():
     ap.add_argument("--images", required=True, nargs="+", help="a folder, or 12 files in Jan..Dec order")
     ap.add_argument("--captions", help="text file with up to 12 lines")
     ap.add_argument("--focus", choices=["top", "center", "bottom"], default="top")
+    if "--restamp" in sys.argv[1:]:
+        restamp_all()
+        return
     a = ap.parse_args()
 
     paths = [Path(p).expanduser() for p in a.images]

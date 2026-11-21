@@ -77,6 +77,7 @@ std::vector<CatalogEntry> loadCatalog() {
     fe["category"] = true;
     fe["year"] = true;
     fe["path"] = true;
+    fe["version"] = true;
     JsonDocument doc;
     DeserializationError err = deserializeJson(doc, f, DeserializationOption::Filter(filter));
     f.close();
@@ -88,6 +89,7 @@ std::vector<CatalogEntry> loadCatalog() {
       e.title = c["title"] | e.id.c_str();
       e.category = c["category"] | "Misc";
       e.year = c["year"] | 0;
+      e.version = c["version"] | "";
       e.path = c["path"] | ("calendars/" + e.id + "/").c_str();
       if (!e.path.endsWith("/")) e.path += "/";
       list.push_back(e);
@@ -119,7 +121,11 @@ std::vector<CatalogEntry> loadCatalog() {
     root.close();
   }
 
-  for (auto &e : list) e.downloaded = isDownloaded(e.id);
+  for (auto &e : list) {
+    e.downloaded = isDownloaded(e.id);
+    CalendarMeta m;
+    if (e.downloaded && loadMeta(e.id, m)) e.localVersion = m.version;
+  }
 
   std::sort(list.begin(), list.end(), [](const CatalogEntry &a, const CatalogEntry &b) {
     if (a.category != b.category) return a.category < b.category;
@@ -134,39 +140,64 @@ bool refreshCatalog() {
   return Net::download(settings.catalogUrl, CATALOG_PATH) > 0;
 }
 
+bool findEntry(const String &id, CatalogEntry &out) {
+  for (auto &e : loadCatalog())
+    if (e.id == id) {
+      out = e;
+      return true;
+    }
+  return false;
+}
+
 bool downloadCalendar(const CatalogEntry &e, Progress progress) {
   if (!validId(e.id)) return false;
   String dir = calDir(e.id);
   if (!SD.exists(dir)) SD.mkdir(dir);
   String remote = e.path.startsWith("http") ? e.path : baseUrl() + e.path;
+  String metaPath = dir + "/calendar.json";
+  String newMetaPath = dir + "/calendar.new";
 
-  const int total = 13;
+  // Work out which images need fetching before downloading anything.
+  CalendarMeta oldMeta, newMeta;
+  bool haveOld = loadMeta(e.id, oldMeta);
+  if (Net::download(remote + "calendar.json", newMetaPath) <= 0) return false;
+  if (!loadMetaFile(newMetaPath, e.id, newMeta)) return false;
+
+  bool need[12];
+  int total = 1;
+  for (int m = 1; m <= 12; m++) {
+    const String &now = newMeta.sha[m - 1];
+    bool changed = haveOld && (now.isEmpty() ? oldMeta.version != newMeta.version : oldMeta.sha[m - 1] != now);
+    need[m - 1] = !fileNonEmpty(imagePath(e.id, m)) || changed;
+    total += need[m - 1];
+  }
   int done = 0;
   if (progress) progress(done, total);
-
-  if (Net::download(remote + "calendar.json", dir + "/calendar.json") <= 0) return false;
   if (progress) progress(++done, total);
 
   bool allOk = true;
   for (int m = 1; m <= 12; m++) {
+    if (!need[m - 1]) continue;
+    char name[8];
+    snprintf(name, sizeof(name), "%02d.jpg", m);
     String path = imagePath(e.id, m);
-    if (!fileNonEmpty(path)) {
-      char name[8];
-      snprintf(name, sizeof(name), "%02d.jpg", m);
-      // one retry for flaky Wi-Fi
-      if (Net::download(remote + name, path) <= 0 && Net::download(remote + name, path) <= 0) allOk = false;
-    }
+    // one retry for flaky Wi-Fi
+    if (Net::download(remote + name, path) <= 0 && Net::download(remote + name, path) <= 0) allOk = false;
     if (progress) progress(++done, total);
   }
-  return allOk;
+  if (!allOk) return false;  // keep the old calendar.json so the changed images are retried
+  SD.remove(metaPath);
+  return SD.rename(newMetaPath, metaPath);
 }
 
-bool loadMeta(const String &id, CalendarMeta &meta) {
+bool loadMeta(const String &id, CalendarMeta &meta) { return loadMetaFile(calDir(id) + "/calendar.json", id, meta); }
+
+bool loadMetaFile(const String &path, const String &id, CalendarMeta &meta) {
   meta = CalendarMeta();
   meta.id = id;
   for (int i = 0; i < 12; i++) meta.cropY[i] = DEFAULT_CROP_Y;
 
-  File f = SD.open(calDir(id) + "/calendar.json");
+  File f = SD.open(path);
   if (!f) return false;
   JsonDocument doc;
   DeserializationError err = deserializeJson(doc, f);
@@ -176,6 +207,7 @@ bool loadMeta(const String &id, CalendarMeta &meta) {
   meta.title = doc["title"] | id.c_str();
   meta.category = doc["category"] | "Misc";
   meta.year = doc["year"] | 0;
+  meta.version = doc["version"] | "";
 
   JsonArray months = doc["months"].as<JsonArray>();
   int i = 0;
@@ -185,6 +217,7 @@ bool loadMeta(const String &id, CalendarMeta &meta) {
       meta.captions[i] = mv.as<const char *>();
     } else {
       meta.captions[i] = mv["caption"] | "";
+      meta.sha[i] = mv["sha"] | "";
       meta.cropY[i] = constrain((int)(mv["crop_y"] | DEFAULT_CROP_Y), 0, 320 - 170);
     }
     i++;
@@ -197,6 +230,7 @@ bool removeCalendar(const String &id) {
   String dir = calDir(id);
   for (int m = 1; m <= 12; m++) SD.remove(imagePath(id, m));
   SD.remove(dir + "/calendar.json");
+  SD.remove(dir + "/calendar.new");
   return SD.rmdir(dir);
 }
 

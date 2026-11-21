@@ -62,7 +62,8 @@ MenuHit hitMenu(int16_t x, int16_t y, int &row);
 
 // --- misc ---
 void drawMessage(const String &title, const String &l1 = "", const String &l2 = "", const String &l3 = "");
-void drawProgress(const String &title, const String &what, int done, int total);
+void drawProgress(const String &title, const String &what, int done, int total,
+                  const char *heading = "DOWNLOADING");
 // "Thu Nov 26  <names>"
 String formatDayLine(int year, int month, int day, const String &names);
 }  // namespace UI

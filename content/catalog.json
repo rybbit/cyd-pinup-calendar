@@ -5,19 +5,22 @@
       "id": "bikinis-2027",
       "title": "Sun, Sand & Swimsuits",
       "category": "Bikinis",
-      "year": 2027
+      "year": 2027,
+      "version": "c3019526c106"
     },
     {
       "id": "dogs-2027",
       "title": "Good Boys & Girls",
       "category": "Dogs",
-      "year": 2027
+      "year": 2027,
+      "version": "a0fd72612f92"
     },
     {
       "id": "guns-2027",
       "title": "Iron & Walnut",
       "category": "Guns",
-      "year": 2027
+      "year": 2027,
+      "version": "d31174a2a2db"
     }
   ]
 }

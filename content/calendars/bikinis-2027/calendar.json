@@ -6,51 +6,64 @@
   "months": [
     {
       "caption": "Miss January",
-      "crop_y": 35
+      "crop_y": 35,
+      "sha": "87a37a518e5f"
     },
     {
       "caption": "Miss February",
-      "crop_y": 0
+      "crop_y": 0,
+      "sha": "571e5aefc962"
     },
     {
       "caption": "Miss March",
-      "crop_y": 0
+      "crop_y": 0,
+      "sha": "bc95e6637af7"
     },
     {
       "caption": "Miss April",
-      "crop_y": 0
+      "crop_y": 0,
+      "sha": "f03b2ece11d3"
     },
     {
       "caption": "Miss May",
-      "crop_y": 0
+      "crop_y": 0,
+      "sha": "5cd2f17d967f"
     },
     {
       "caption": "Miss June",
-      "crop_y": 0
+      "crop_y": 0,
+      "sha": "81164107e03f"
     },
     {
       "caption": "Miss July",
-      "crop_y": 0
+      "crop_y": 0,
+      "sha": "c4baee241941"
     },
     {
       "caption": "Miss August",
-      "crop_y": 0
+      "crop_y": 0,
+      "sha": "af791825b5cd"
     },
     {
       "caption": "Miss September",
-      "crop_y": 0
+      "crop_y": 0,
+      "sha": "9b215e442426"
     },
     {
       "caption": "Miss October",
-      "crop_y": 15
+      "crop_y": 15,
+      "sha": "909cf29f8601"
     },
     {
       "caption": "Miss November",
-      "crop_y": 20
+      "crop_y": 20,
+      "sha": "6bc221d01b29"
     },
     {
       "caption": "Miss December",
-      "crop_y": 0
+      "crop_y": 0,
+      "sha": "88a07d2a35b5"
     }
-  ]
+  ],
+  "version": "c3019526c106"
 }
