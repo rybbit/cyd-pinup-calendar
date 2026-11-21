@@ -1,0 +1,80 @@
+{
+  "year": 2027,
+  "title": "Paddle, Portage, Repeat",
+  "months": [
+    {
+      "caption": "",
+      "crop_y": 75,
+      "sha": "9c6d8d7c8b2b",
+      "top_sha": "d21f4d8f7056"
+    },
+    {
+      "caption": "",
+      "crop_y": 75,
+      "sha": "62c55d015472",
+      "top_sha": "cdd3c6bffdc3"
+    },
+    {
+      "caption": "",
+      "crop_y": 75,
+      "sha": "e85a6dd4e4a8",
+      "top_sha": "292527f7e230"
+    },
+    {
+      "caption": "",
+      "crop_y": 75,
+      "sha": "c2ad88aa5bc0",
+      "top_sha": "d268f8354efb"
+    },
+    {
+      "caption": "",
+      "crop_y": 75,
+      "sha": "7b0685a66a20",
+      "top_sha": "dbaef0e190ed"
+    },
+    {
+      "caption": "",
+      "crop_y": 75,
+      "sha": "fa54aeb17f58",
+      "top_sha": "2ba7fe990f0b"
+    },
+    {
+      "caption": "",
+      "crop_y": 75,
+      "sha": "8a0265121556",
+      "top_sha": "41764b606c99"
+    },
+    {
+      "caption": "",
+      "crop_y": 75,
+      "fit": "frame",
+      "sha": "0ccb4d88078c",
+      "top_sha": "ff34c720a6cc"
+    },
+    {
+      "caption": "",
+      "crop_y": 75,
+      "sha": "00259e555135",
+      "top_sha": "fe27a1eb2efa"
+    },
+    {
+      "caption": "",
+      "crop_y": 75,
+      "sha": "aad010998d98",
+      "top_sha": "ac24ee2f0859"
+    },
+    {
+      "caption": "",
+      "crop_y": 75,
+      "sha": "9f41635ae214",
+      "top_sha": "cf7e56d4f1da"
+    },
+    {
+      "caption": "",
+      "crop_y": 75,
+      "sha": "a4a7c3ebc0f1",
+      "top_sha": "23ef56bf39b1"
+    }
+  ],
+  "version": "011054e810a9"
+}

@@ -19,6 +19,17 @@
       "years": {
         "2027": "2ce715795e7c"
       }
+    },
+    {
+      "id": "bwca",
+      "title": "Boundary Waters",
+      "category": "Outdoors",
+      "version": "22fd4726993e",
+      "years": {
+        "2026": "3bcf01592b9c",
+        "2027": "011054e810a9",
+        "2028": "f4fc77474530"
+      }
     }
   ]
 }

@@ -1,0 +1,84 @@
+{
+  "year": 2028,
+  "title": "North of Ordinary",
+  "months": [
+    {
+      "caption": "",
+      "crop_y": 75,
+      "sha": "ca9363b2a3eb",
+      "top_sha": "eaac9b1f7b42"
+    },
+    {
+      "caption": "",
+      "crop_y": 75,
+      "sha": "3dc02e2bc491",
+      "top_sha": "f67d3e9f45ae"
+    },
+    {
+      "caption": "",
+      "crop_y": 75,
+      "sha": "a8a3e2c80e20",
+      "top_sha": "c40332cd7e84"
+    },
+    {
+      "caption": "",
+      "crop_y": 75,
+      "sha": "cb54b66ae16b",
+      "top_sha": "f52597fa990e"
+    },
+    {
+      "caption": "",
+      "crop_y": 75,
+      "fit": "frame",
+      "sha": "5d5dfb18a180",
+      "top_sha": "8fee52fbe1dd"
+    },
+    {
+      "caption": "",
+      "crop_y": 75,
+      "fit": "frame",
+      "sha": "8cfaee6a7161",
+      "top_sha": "d3de51c95366"
+    },
+    {
+      "caption": "",
+      "crop_y": 75,
+      "fit": "frame",
+      "sha": "2587c0c2f14b",
+      "top_sha": "d12fea404a31"
+    },
+    {
+      "caption": "",
+      "crop_y": 75,
+      "sha": "c684859c2d25",
+      "top_sha": "459175cfb9e5"
+    },
+    {
+      "caption": "",
+      "crop_y": 75,
+      "fit": "frame",
+      "sha": "db7563455f7f",
+      "top_sha": "11c4999ecc26"
+    },
+    {
+      "caption": "",
+      "crop_y": 75,
+      "sha": "5e51b1d9c16f",
+      "top_sha": "93587242995a"
+    },
+    {
+      "caption": "",
+      "crop_y": 75,
+      "sha": "ae85f9283006",
+      "top_sha": "cb027d40dd6f"
+    },
+    {
+      "caption": "",
+      "crop_y": 75,
+      "fit": "frame",
+      "sha": "beeda82567ee",
+      "top_sha": "ccd5ad5de96c"
+    }
+  ],
+  "version": "f4fc77474530"
+}

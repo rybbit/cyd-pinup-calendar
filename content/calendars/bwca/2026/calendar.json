@@ -1,0 +1,62 @@
+{
+  "year": 2026,
+  "title": "Smoke on the Water",
+  "months": [
+    {
+      "caption": "",
+      "crop_y": 0
+    },
+    {
+      "caption": "",
+      "crop_y": 0
+    },
+    {
+      "caption": "",
+      "crop_y": 0
+    },
+    {
+      "caption": "",
+      "crop_y": 0
+    },
+    {
+      "caption": "",
+      "crop_y": 0
+    },
+    {
+      "caption": "",
+      "crop_y": 0
+    },
+    {
+      "caption": "",
+      "crop_y": 0
+    },
+    {
+      "caption": "",
+      "crop_y": 0
+    },
+    {
+      "caption": "",
+      "crop_y": 0
+    },
+    {
+      "caption": "",
+      "crop_y": 75,
+      "fit": "frame",
+      "sha": "68ba4f42c84e",
+      "top_sha": "6a5fdac87841"
+    },
+    {
+      "caption": "",
+      "crop_y": 75,
+      "sha": "9a116be8bfc7",
+      "top_sha": "4177b1f66089"
+    },
+    {
+      "caption": "",
+      "crop_y": 75,
+      "sha": "fe33ce651e7f",
+      "top_sha": "b4938daa8277"
+    }
+  ],
+  "version": "3bcf01592b9c"
+}

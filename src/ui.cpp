@@ -54,6 +54,7 @@ bool jpgOutput(int16_t x, int16_t y, uint16_t w, uint16_t h, uint16_t *bitmap) {
 
 // Decodes a JPEG from SD into the band [0, clipH) with the image shifted up by offsetY.
 bool drawJpeg(const String &path, int offsetY, int clipH) {
+  if (!SD.exists(path)) return false;
   File f = SD.open(path);
   if (!f) return false;
   size_t len = f.size();
@@ -177,6 +178,11 @@ static void drawPlaceholder(const SeriesInfo &s, int year, int h, const String &
 }
 
 static void drawArt(const SeriesInfo &s, const CalendarMeta *meta, int year, int month, int h, int font) {
+  // A separate calendar-page header (MM_top.jpg) wins over a window of the full picture.
+  if (meta && h != SCREEN_H && drawJpeg(Store::topImagePath(s.id, year, month), max(0, (TOP_H - h) / 2), h)) {
+    drawCaption(meta->captions[month - 1], h, font);
+    return;
+  }
   int offset = 0;
   if (meta && h != SCREEN_H) {
     offset = meta->cropY[month - 1];

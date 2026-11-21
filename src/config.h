@@ -29,6 +29,10 @@
 #define JPEG_SWAP_RB 0
 #endif
 
+// Optional per-month calendar-page header pictures (MM_top.jpg) are 240 x TOP_H, the
+// tallest picture window any layout uses; shorter windows show the middle of it.
+#define TOP_H 184
+
 #define SCREEN_W 240
 #define SCREEN_H 320
 

@@ -131,6 +131,7 @@ bool loadMetaFile(const String &path, int year, CalendarMeta &meta) {
     } else {
       meta.captions[i] = mv["caption"] | "";
       meta.sha[i] = mv["sha"] | "";
+      meta.topSha[i] = mv["top_sha"] | "";
       meta.framed[i] = allFramed || String(mv["fit"] | "") == "frame";
       meta.cropY[i] = constrain((int)(mv["crop_y"] | DEFAULT_CROP_Y), 0, 320 - 170);
     }
@@ -150,8 +151,10 @@ bool monthExpected(const CalendarMeta &meta, int m) {
 bool yearDownloaded(const String &id, int year) {
   CalendarMeta meta;
   if (!loadMetaFile(yearDir(id, year) + "/calendar.json", year, meta)) return false;
-  for (int m = 1; m <= 12; m++)
+  for (int m = 1; m <= 12; m++) {
     if (monthExpected(meta, m) && !fileNonEmpty(Store::imagePath(id, year, m))) return false;
+    if (meta.topSha[m - 1].length() && !fileNonEmpty(Store::topImagePath(id, year, m))) return false;
+  }
   return true;
 }
 
@@ -161,8 +164,10 @@ bool downloadTwice(const String &url, const String &path) {  // one retry for fl
 
 void removeYearFiles(const String &dir) {
   for (int m = 1; m <= 12; m++) {
-    char name[8];
+    char name[16];
     snprintf(name, sizeof(name), "/%02d.jpg", m);
+    if (SD.exists(dir + name)) SD.remove(dir + name);
+    snprintf(name, sizeof(name), "/%02d_top.jpg", m);
     if (SD.exists(dir + name)) SD.remove(dir + name);
   }
   for (const char *f : {"/calendar.json", "/calendar.new"})
@@ -183,7 +188,7 @@ bool downloadYear(const String &remoteSeries, const String &id, int year, Store:
   if (Net::download(remote + "calendar.json", newMetaPath) <= 0) return false;
   if (!loadMetaFile(newMetaPath, year, newMeta)) return false;
 
-  bool need[12];
+  bool need[12], needTop[12];
   int total = 1;
   for (int m = 1; m <= 12; m++) {
     const String &now = newMeta.sha[m - 1];
@@ -191,18 +196,28 @@ bool downloadYear(const String &remoteSeries, const String &id, int year, Store:
     need[m - 1] = monthExpected(newMeta, m) && (!fileNonEmpty(Store::imagePath(id, year, m)) || changed);
     if (!monthExpected(newMeta, m) && SD.exists(Store::imagePath(id, year, m)))
       SD.remove(Store::imagePath(id, year, m));  // month dropped from the edition
-    total += need[m - 1];
+    const String &top = newMeta.topSha[m - 1];
+    String topPath = Store::topImagePath(id, year, m);
+    needTop[m - 1] = top.length() && (!fileNonEmpty(topPath) || (haveOld && oldMeta.topSha[m - 1] != top));
+    if (top.isEmpty() && SD.exists(topPath)) SD.remove(topPath);  // header dropped
+    total += need[m - 1] + needTop[m - 1];
   }
   int done = 1;
   if (progress) progress(label, done, total);
 
   bool allOk = true;
   for (int m = 1; m <= 12; m++) {
-    if (!need[m - 1]) continue;
-    char name[8];
-    snprintf(name, sizeof(name), "%02d.jpg", m);
-    if (!downloadTwice(remote + name, Store::imagePath(id, year, m))) allOk = false;
-    if (progress) progress(label, ++done, total);
+    char name[16];
+    if (need[m - 1]) {
+      snprintf(name, sizeof(name), "%02d.jpg", m);
+      if (!downloadTwice(remote + name, Store::imagePath(id, year, m))) allOk = false;
+      if (progress) progress(label, ++done, total);
+    }
+    if (needTop[m - 1]) {
+      snprintf(name, sizeof(name), "%02d_top.jpg", m);
+      if (!downloadTwice(remote + name, Store::topImagePath(id, year, m))) allOk = false;
+      if (progress) progress(label, ++done, total);
+    }
   }
   if (!allOk) return false;  // keep the old calendar.json so changed images are retried
   if (SD.exists(metaPath)) SD.remove(metaPath);
@@ -250,6 +265,12 @@ bool sdOk() { return sdMounted; }
 String imagePath(const String &id, int year, int month) {
   char name[8];
   snprintf(name, sizeof(name), "/%02d.jpg", month);
+  return yearDir(id, year) + name;
+}
+
+String topImagePath(const String &id, int year, int month) {
+  char name[16];
+  snprintf(name, sizeof(name), "/%02d_top.jpg", month);
   return yearDir(id, year) + name;
 }
 

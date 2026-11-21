@@ -50,7 +50,8 @@ struct CalendarMeta {
   int year = 0;
   String title;
   String version;
-  String sha[12];  // per-image fingerprint; a changed sha means re-download that month
+  String sha[12];     // per-image fingerprint; a changed sha means re-download that month
+  String topSha[12];  // same for the optional calendar-page header MM_top.jpg
   String captions[12];
   int16_t cropY[12];   // first image row shown in the 240x170 calendar view
   bool framed[12];  // month built with --fit frame (photo centered on the canvas)
@@ -79,5 +80,6 @@ bool downloadSeries(const SeriesEntry &e, Progress progress);
 bool loadSeries(const String &id, SeriesInfo &out);
 bool loadYear(const String &id, int year, CalendarMeta &out);
 String imagePath(const String &id, int year, int month);
+String topImagePath(const String &id, int year, int month);  // optional MM_top.jpg
 String placeholderPath(const String &id);
 }  // namespace Store

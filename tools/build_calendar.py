@@ -91,6 +91,33 @@ def frame(img: Image.Image) -> Image.Image:
 
 FRAME_CROP_Y = (H - VIEW_H) // 2
 
+# Optional per-month header picture (MM_top.jpg) for the calendar page. The page's picture
+# window is 138-184 px tall depending on the advertising lines in config.txt; the CYD
+# centers this 240x184 picture in it.
+TOP_H = 184
+
+
+def blur_fit(img: Image.Image, bars: bool = False) -> Image.Image:
+    """Whole picture fitted inside 240x320. The empty space is a blurred, darkened copy of
+    the picture (bars=False) or plain near-black bars (bars=True, e.g. for night shots)."""
+    img = ImageOps.exif_transpose(img).convert("RGB")
+    if bars:
+        canvas = Image.new("RGB", (W, H), (12, 12, 14))
+    else:
+        bg = ImageOps.fit(img, (W, H), Image.LANCZOS).filter(ImageFilter.GaussianBlur(14))
+        canvas = Image.blend(bg, Image.new("RGB", (W, H), (0, 0, 0)), 0.35)
+    fg = img.copy()
+    fg.thumbnail((W, H), Image.LANCZOS)
+    canvas.paste(fg, ((W - fg.width) // 2, (H - fg.height) // 2))
+    return canvas
+
+
+def top_crop(img: Image.Image, focus_y: float = 0.5) -> Image.Image:
+    """Calendar-page header: a 240xTOP_H crop. focus_y picks the band for tall pictures
+    (0.35 = upper-middle)."""
+    img = ImageOps.exif_transpose(img).convert("RGB")
+    return ImageOps.fit(img, (W, TOP_H), Image.LANCZOS, centering=(0.5, focus_y))
+
 
 def trim_plain_border(img: Image.Image, tol: int = 18, pad: float = 0.06) -> Image.Image:
     """Crop away a uniform background (e.g. white product-shot margins), keeping a little padding."""
@@ -108,8 +135,8 @@ def trim_plain_border(img: Image.Image, tol: int = 18, pad: float = 0.06) -> Ima
                      min(img.width, bbox[2] + px), min(img.height, bbox[3] + py)))
 
 
-def save_jpeg(img: Image.Image, path: Path) -> int:
-    for quality in (88, 82, 75, 68, 60):
+def save_jpeg(img: Image.Image, path: Path, quality: int = 88) -> int:
+    for quality in [quality] + [q for q in (82, 75, 68, 60) if q < quality]:
         img.save(path, "JPEG", quality=quality, optimize=True, progressive=False, subsampling="4:2:0")
         if path.stat().st_size <= MAX_BYTES:
             break
@@ -160,27 +187,45 @@ def wants_frame(img: Image.Image, fit_mode: str) -> bool:
 
 
 def write_edition(root: Path, year: int, title: str, images, captions, focus, crops=None, fit_mode="crop",
-                  first_month=1):
+                  first_month=1, fits=None, tops=None, quality=88):
     """images fill months first_month.. in order; months outside that range get no picture
-    (the CYD shows the series placeholder there)."""
+    (the CYD shows the series placeholder there).
+
+    fits: optional per-image fit mode (overrides fit_mode).
+    tops: optional per-image calendar-page header focus (a float, see top_crop) or None for
+          no separate header; a header is written as MM_top.jpg.
+    """
     out = root / str(year)
     out.mkdir(parents=True, exist_ok=True)
     months = []
     for m in range(1, 13):
         i = m - first_month
-        path = out / f"{m:02d}.jpg"
+        path, top_path = out / f"{m:02d}.jpg", out / f"{m:02d}_top.jpg"
         if not 0 <= i < len(images):
             path.unlink(missing_ok=True)
+            top_path.unlink(missing_ok=True)
             months.append({"caption": "", "crop_y": 0})
             continue
-        framed = wants_frame(images[i], fit_mode)
-        size = save_jpeg(frame(images[i]) if framed else fit(images[i], focus), path)
+        mode = fits[i] if fits else fit_mode
+        if mode in ("crop", "frame", "auto"):
+            framed = wants_frame(images[i], mode)
+            pic = frame(images[i]) if framed else fit(images[i], focus)
+        else:  # blur / bars: whole picture, centered
+            framed = True
+            pic = blur_fit(images[i], bars=(mode == "bars"))
+        size = save_jpeg(pic, path, quality)
         crop = crops[i] if crops else (FRAME_CROP_Y if framed else default_crop(focus))
         entry = {"caption": captions[i] if i < len(captions) else "", "crop_y": crop}
         if framed:
             entry["fit"] = "frame"  # tells the CYD the photo is centered, not top-aligned
+        note = f"  ({mode})" if mode != "crop" else ""
+        if tops and tops[i] is not None:
+            save_jpeg(top_crop(images[i], tops[i]), top_path, quality)
+            note += "  + top"
+        else:
+            top_path.unlink(missing_ok=True)
         months.append(entry)
-        print(f"  {year}/{m:02d}.jpg  {size // 1024} KB{'  (framed)' if framed else ''}")
+        print(f"  {year}/{m:02d}.jpg  {size // 1024} KB{note}")
     write_json(out / "calendar.json", {"year": year, "title": title, "months": months})
     stamp_edition(out)
 
@@ -197,11 +242,15 @@ def stamp_edition(year_dir: Path) -> str:
     path = year_dir / "calendar.json"
     meta = read_json(path)
     for i, m in enumerate(meta["months"]):
-        jpg = year_dir / f"{i + 1:02d}.jpg"
+        jpg, top = year_dir / f"{i + 1:02d}.jpg", year_dir / f"{i + 1:02d}_top.jpg"
         if jpg.exists():
             m["sha"] = short_hash(jpg.read_bytes())
         else:
             m.pop("sha", None)
+        if top.exists():
+            m["top_sha"] = short_hash(top.read_bytes())
+        else:
+            m.pop("top_sha", None)
     basis = {k: meta.get(k) for k in ("year", "title", "fit", "months")}
     meta["version"] = short_hash(json.dumps(basis, sort_keys=True).encode())
     write_json(path, meta)
@@ -251,6 +300,43 @@ def restamp_all():
     rebuild_catalog()
 
 
+# ---------------------------------------------------------------- manifest
+
+MONTHS3 = "jan feb mar apr may jun jul aug sep oct nov dec".split()
+
+
+def build_manifest(root: Path, manifest: Path, titles: dict, quality: int, export_dir=None):
+    """CSV columns: year, month, image, fit, top, caption
+         fit: crop | frame | auto | blur | bars   (how the full-screen picture is made)
+         top: blank for none, or a 0-1 vertical focus for a separate calendar-page header
+              (0.5 = center, 0.35 = upper-middle)
+    Each year becomes an edition; months a year doesn't list show the placeholder."""
+    import csv
+    rows = list(csv.DictReader(manifest.open()))
+    by_year = {}
+    for r in rows:
+        by_year.setdefault(int(r["year"]), []).append(r)
+    for year, rs in sorted(by_year.items()):
+        rs.sort(key=lambda r: int(r["month"]))
+        first, last = int(rs[0]["month"]), int(rs[-1]["month"])
+        if [int(r["month"]) for r in rs] != list(range(first, last + 1)):
+            sys.exit(f"{year}: months must be consecutive")
+        if year not in titles:
+            sys.exit(f"no title for {year}: pass --titles {year}=\"...\"")
+        images = [Image.open(Path(r["image"]).expanduser()) for r in rs]
+        write_edition(root, year, titles[year], images, [r.get("caption", "") for r in rs], "center",
+                      first_month=first, fits=[r["fit"] or "crop" for r in rs],
+                      tops=[float(r["top"]) if r.get("top") else None for r in rs], quality=quality)
+        if export_dir:  # copies named like bwca_2026_10_oct_full.jpg / _top.jpg
+            export_dir.mkdir(parents=True, exist_ok=True)
+            for r in rs:
+                m = int(r["month"])
+                stem = f"{root.name}_{year}_{m:02d}_{MONTHS3[m - 1]}"
+                for src, suffix in ((f"{m:02d}.jpg", "full"), (f"{m:02d}_top.jpg", "top")):
+                    if (root / str(year) / src).exists():
+                        (export_dir / f"{stem}_{suffix}.jpg").write_bytes((root / str(year) / src).read_bytes())
+
+
 # ---------------------------------------------------------------- CLI
 
 def load_images(args, first_month=1):
@@ -276,13 +362,17 @@ def main():
     ap.add_argument("--images", nargs="+", help="a folder, or 12 files in Jan..Dec order")
     ap.add_argument("--captions", help="text file with up to 12 lines")
     ap.add_argument("--focus", choices=["top", "center", "bottom"], default="top")
-    ap.add_argument("--fit", choices=["crop", "frame", "auto"], default="crop",
+    ap.add_argument("--fit", choices=["crop", "frame", "auto", "blur", "bars"], default="crop",
                     help="crop: fill the screen (portrait art); frame: whole photo on a sunburst "
                          "(landscape photos); auto: decide per picture")
     ap.add_argument("--first-month", type=int, default=1, choices=range(1, 13), metavar="1-12",
                     help="month the first image goes to (for a year that starts late)")
     ap.add_argument("--partial", action="store_true", help="allow fewer than 12 images (year ends early)")
     ap.add_argument("--placeholder", help="image shown for years with no edition")
+    ap.add_argument("--manifest", help="CSV with year,month,image,fit,top,caption (see build_manifest)")
+    ap.add_argument("--titles", nargs="+", default=[], help='edition titles for --manifest: 2027="Title" ...')
+    ap.add_argument("--quality", type=int, default=88, help="starting JPEG quality")
+    ap.add_argument("--export", help="with --manifest: also copy outputs here as <series>_YYYY_MM_mon_full/_top.jpg")
     ap.add_argument("--sd", help="SD card mount point: write a custom calendar there instead of content/")
     a = ap.parse_args()
 
@@ -301,6 +391,10 @@ def main():
         root = CONTENT / "calendars" / a.series
 
     ensure_series(root, a.series, a.series_title, a.category, custom)
+    if a.manifest:
+        titles = {int(t.split("=", 1)[0]): t.split("=", 1)[1] for t in a.titles}
+        build_manifest(root, Path(a.manifest).expanduser(), titles, a.quality,
+                       Path(a.export).expanduser() if a.export else None)
     if a.placeholder:
         write_placeholder(root, Image.open(Path(a.placeholder).expanduser()))
     if a.images:
@@ -309,8 +403,8 @@ def main():
         captions = Path(a.captions).read_text().splitlines()[:12] if a.captions else []
         write_edition(root, a.year, a.title, load_images(a.images, a.first_month), captions, a.focus,
                       fit_mode=a.fit, first_month=a.first_month)
-    elif not a.placeholder:
-        ap.error("nothing to do: pass --images and/or --placeholder")
+    elif not a.placeholder and not a.manifest:
+        ap.error("nothing to do: pass --images, --manifest and/or --placeholder")
 
     if custom:
         print(f"Wrote custom calendar to {root}")

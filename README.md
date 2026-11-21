@@ -130,6 +130,24 @@ Otherwise the board draws a retro sunburst with the category, the year, and "COM
 
 **Fine-tuning.** The calendar page shows a 240x170 window of each picture. To change which part shows, set `"crop_y"` (0–150) for that month in the edition's `calendar.json`. Tapping the picture always shows the whole image. After editing any JSON by hand or swapping a jpg, run `python3 tools/build_calendar.py --restamp` before committing, so the board notices.
 
+**Photos and per-month control.** For photo calendars, `--fit` picks how each full-screen picture is made:
+- `crop`: fill the screen (pin-up art and portrait photos)
+- `frame`: a bordered print on a sunburst (product shots)
+- `blur`: the whole photo, with blurred edges filling the space
+- `bars`: the whole photo, with dark bars
+- `auto`: crop or frame, decided per picture
+
+Years can start late (`--first-month 10`) or end early (`--partial`).
+
+**Manifest.** For month-by-month choices, use a CSV manifest with the columns `year,month,image,fit,top,caption`:
+
+```sh
+python3 tools/build_calendar.py --series bwca --series-title "Boundary Waters" --category Outdoors \
+    --manifest bwca.csv --quality 85 --titles 2027="Paddle, Portage, Repeat" 2028="North of Ordinary"
+```
+
+A `top` value (0–1 vertical focus: 0.5 is center, 0.1 is near the top) also writes `MM_top.jpg`, a separate 240x184 header crop. The calendar page shows the header and full screen shows the main picture, so a wide landscape can have a good crop in both places.
+
 `tools/make_demo_calendars.py` generates placeholder-art editions for testing.
 
 ## Custom calendars on the SD card
