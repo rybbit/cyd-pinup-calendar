@@ -42,7 +42,7 @@ import re
 import sys
 from pathlib import Path
 
-from PIL import Image, ImageOps
+from PIL import Image, ImageDraw, ImageFilter, ImageOps
 
 W, H = 240, 320
 VIEW_H = 170
@@ -58,6 +58,54 @@ def fit(img: Image.Image, focus: str) -> Image.Image:
         return img
     centering = {"top": (0.5, 0.15), "center": (0.5, 0.5), "bottom": (0.5, 0.85)}[focus]
     return ImageOps.fit(img, (W, H), Image.LANCZOS, centering=centering)
+
+
+def frame(img: Image.Image) -> Image.Image:
+    """Whole picture, uncropped, as a bordered print on a retro sunburst.
+
+    For landscape or odd-shaped photos (e.g. product shots of long guns) that a portrait
+    crop would ruin. The print is centered on the canvas so it sits inside the calendar
+    page's 240x170 window when crop_y = FRAME_CROP_Y.
+    """
+    import math
+    img = trim_plain_border(ImageOps.exif_transpose(img).convert("RGB"))
+    canvas = Image.new("RGB", (W, H), (240, 230, 205))
+    d = ImageDraw.Draw(canvas)
+    cx, cy, r = W / 2, H / 2, 400
+    for k in range(0, 24, 2):
+        a0, a1 = math.radians(k * 15), math.radians(k * 15 + 15)
+        d.polygon([(cx, cy), (cx + r * math.cos(a0), cy + r * math.sin(a0)),
+                   (cx + r * math.cos(a1), cy + r * math.sin(a1))], fill=(222, 206, 168))
+    border, max_w, max_h = 5, W - 16, VIEW_H - 22
+    img.thumbnail((max_w - 2 * border, max_h - 2 * border), Image.LANCZOS)
+    pw, ph = img.width + 2 * border, img.height + 2 * border
+    x, y = (W - pw) // 2, (H - ph) // 2
+    shadow = Image.new("L", (W, H), 0)
+    ImageDraw.Draw(shadow).rectangle([x + 4, y + 4, x + pw + 3, y + ph + 3], fill=110)
+    canvas.paste((40, 32, 25), mask=shadow.filter(ImageFilter.GaussianBlur(3)))
+    d = ImageDraw.Draw(canvas)
+    d.rectangle([x, y, x + pw - 1, y + ph - 1], fill=(252, 249, 240), outline=(60, 50, 40))
+    canvas.paste(img, (x + border, y + border))
+    return canvas
+
+
+FRAME_CROP_Y = (H - VIEW_H) // 2
+
+
+def trim_plain_border(img: Image.Image, tol: int = 18, pad: float = 0.06) -> Image.Image:
+    """Crop away a uniform background (e.g. white product-shot margins), keeping a little padding."""
+    from PIL import ImageChops
+    corner = img.getpixel((0, 0))
+    if any(img.getpixel(p) != corner and max(abs(a - b) for a, b in zip(img.getpixel(p), corner)) > tol
+           for p in ((img.width - 1, 0), (0, img.height - 1), (img.width - 1, img.height - 1))):
+        return img  # corners differ: not a plain background
+    diff = ImageChops.difference(img, Image.new("RGB", img.size, corner)).convert("L")
+    bbox = diff.point(lambda v: 255 if v > tol else 0).getbbox()
+    if not bbox:
+        return img
+    px, py = int(img.width * pad), int(img.height * pad)
+    return img.crop((max(0, bbox[0] - px), max(0, bbox[1] - py),
+                     min(img.width, bbox[2] + px), min(img.height, bbox[3] + py)))
 
 
 def save_jpeg(img: Image.Image, path: Path) -> int:
@@ -105,13 +153,14 @@ def ensure_series(root: Path, series_id: str, title=None, category=None, custom=
     stamp_series(root)
 
 
-def write_edition(root: Path, year: int, title: str, images, captions, focus, crops=None):
+def write_edition(root: Path, year: int, title: str, images, captions, focus, crops=None, fit_mode="crop"):
     out = root / str(year)
     out.mkdir(parents=True, exist_ok=True)
     months = []
     for i, img in enumerate(images):
-        size = save_jpeg(fit(img, focus), out / f"{i + 1:02d}.jpg")
-        crop = crops[i] if crops else default_crop(focus)
+        pic = frame(img) if fit_mode == "frame" else fit(img, focus)
+        size = save_jpeg(pic, out / f"{i + 1:02d}.jpg")
+        crop = crops[i] if crops else (FRAME_CROP_Y if fit_mode == "frame" else default_crop(focus))
         months.append({"caption": captions[i] if i < len(captions) else "", "crop_y": crop})
         print(f"  {year}/{i + 1:02d}.jpg  {size // 1024} KB")
     write_json(out / "calendar.json", {"year": year, "title": title, "months": months})
@@ -202,6 +251,8 @@ def main():
     ap.add_argument("--images", nargs="+", help="a folder, or 12 files in Jan..Dec order")
     ap.add_argument("--captions", help="text file with up to 12 lines")
     ap.add_argument("--focus", choices=["top", "center", "bottom"], default="top")
+    ap.add_argument("--fit", choices=["crop", "frame"], default="crop",
+                    help="crop: fill the screen (portrait art); frame: whole photo on a sunburst (landscape photos)")
     ap.add_argument("--placeholder", help="image shown for years with no edition")
     ap.add_argument("--sd", help="SD card mount point: write a custom calendar there instead of content/")
     a = ap.parse_args()
@@ -227,7 +278,7 @@ def main():
         if not a.year or not a.title:
             ap.error("--images needs --year and --title")
         captions = Path(a.captions).read_text().splitlines()[:12] if a.captions else []
-        write_edition(root, a.year, a.title, load_images(a.images), captions, a.focus)
+        write_edition(root, a.year, a.title, load_images(a.images), captions, a.focus, fit_mode=a.fit)
     elif not a.placeholder:
         ap.error("nothing to do: pass --images and/or --placeholder")
 
