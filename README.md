@@ -1,7 +1,7 @@
 # CYD Pin-Up Calendar
 
 An old gas-station giveaway pin-up calendar, but on an ESP32-2432S028R "Cheap Yellow Display" in portrait mode.
-You pick a calendar (Dogs, Guns, Bikinis, and any you add). The CYD downloads its 12 pictures over Wi-Fi to the microSD card and shows the month's picture above a calendar marked with US holidays.
+You pick a calendar series (Dogs, Guns, Bikinis, and any you add). Each series has a separate edition for each year, with 12 pictures. The CYD downloads every edition over Wi-Fi to the microSD card and shows the month's picture above a calendar marked with US holidays. Years with no edition show a placeholder.
 
 ```
 ┌────────────────────┐
@@ -15,7 +15,7 @@ You pick a calendar (Dogs, Guns, Bikinis, and any you add). The CYD downloads it
 │ 8  9 10 (11)12 13 14│  blue dot = observance (Halloween, Mother's Day…)
 │ …                  │  box = today, tap a day to see its holidays
 ├────────────────────┤
-│Thu Nov 26 Thanksgiv│  rotates through the month's holidays · tap = back to today
+│Thu Nov 26 Thanksgiv│  edition title, then the month's holidays · tap = back to today
 └────────────────────┘
 ```
 
@@ -63,41 +63,71 @@ You need a FAT32 microSD card. Calendars are stored in `/calendar/<calendar-id>/
 
    `tz` is a POSIX time zone string. The default is US Eastern (`EST5EDT,M3.2.0,M11.1.0`). Use one of:
    `CST6CDT,M3.2.0,M11.1.0` (Central), `MST7MDT,M3.2.0,M11.1.0` (Mountain), `MST7` (Arizona), `PST8PDT,M3.2.0,M11.1.0` (Pacific), `AKST9AKDT,M3.2.0,M11.1.0` (Alaska), `HST10` (Hawaii).
-   The file is read at boot. After editing it, tap **WI-FI** in the picker to re-read it and reconnect.
-3. **Pick a calendar.** Tap the category bar to filter (All → Bikinis → Dogs → Guns → …), then tap a calendar. It downloads all 12 images with a progress bar, then opens to the current month.
+   The file is read at boot, so reset the board after editing it. If Wi-Fi is down at boot, the board retries every 2 minutes on its own. The dot in the picker's title bar is green when it's online.
+3. **Pick a calendar.** Tap the category bar to filter (All → Bikinis → Dogs → Guns → …), then tap a series. It downloads every year's edition with a progress bar, then opens to the current month.
 
 After that, the calendar boots straight to the current month, and downloaded calendars work without Wi-Fi. Without Wi-Fi the clock isn't set, though: the ESP32 has no battery-backed clock.
 
 ## Adding calendars (the list grows from GitHub)
 
-All content lives in `content/` and is served from GitHub's raw URLs:
+A calendar is a **series** with one **edition** per year. All content lives in `content/` and is served from GitHub's raw URLs:
 
 ```
-content/catalog.json                     list: id, title, category, year
-content/calendars/<id>/calendar.json     captions + crop per month
-content/calendars/<id>/01.jpg … 12.jpg   240x320 baseline JPEG
+content/catalog.json                              series list + a version per year
+content/calendars/<series>/series.json            series title + category
+content/calendars/<series>/placeholder.jpg        optional: shown for years with no edition
+content/calendars/<series>/<year>/calendar.json   edition title, captions, crop per month
+content/calendars/<series>/<year>/01.jpg … 12.jpg 240x320 baseline JPEG
 ```
 
-1. The firmware reads the catalog from
-   `https://raw.githubusercontent.com/rybbit/cyd-pinup-calendar/main/content/catalog.json`
-   (set in `platformio.ini`; override with `catalog=` in `wifi.conf`).
-2. Build a calendar from any 12 pictures (they're sorted by filename, January to December):
+The board mirrors this on the SD card under `/calendar/<series>/`. The firmware reads the catalog from `https://raw.githubusercontent.com/rybbit/cyd-pinup-calendar/main/content/catalog.json` (set in `platformio.ini`; override with `catalog=` in `wifi.conf`).
 
-   ```sh
-   pip install pillow
-   python3 tools/build_calendar.py --id dogs-2028 --title "Good Boys & Girls" \
-       --category Dogs --year 2028 --images ~/Pictures/dogs-2028/ \
-       --captions ~/Pictures/dogs-2028/captions.txt --focus top
-   ```
+**Add a year's edition.** Use any 12 pictures; they're sorted by filename, January to December:
 
-   The script crops and resizes to 240x320, saves baseline JPEGs (the ESP32 decoder can't read progressive JPEGs), keeps each image under 120 KB, writes `calendar.json`, and adds the calendar to `catalog.json`.
-3. Commit and push. On the CYD, open the picker and tap **SYNC**. The new calendar shows up.
+```sh
+pip install pillow
+python3 tools/build_calendar.py --series bikinis --year 2029 --title "Poolside Pals" \
+    --images ~/Pictures/bikinis-2029/ --captions captions.txt --focus top
+```
 
-A new category is just a new `--category` value; the picker builds its category list from the catalog.
+For a brand-new series, also pass `--series-title "Dog Pin-Ups" --category Dogs`. The script does the following:
+- crops and resizes each picture to 240x320
+- saves baseline JPEGs under 120 KB (the ESP32 decoder can't read progressive JPEGs)
+- writes `calendar.json`
+- rebuilds `catalog.json`
 
-The calendar page shows a 240x170 window of each picture. To change which part shows, set `"crop_y"` (0–150) for that month in `calendar.json`. Tapping the picture always shows the whole image.
+Commit and push. The board picks up changes at boot, on **SYNC**, and every 6 hours, and it downloads only the years and images that changed.
 
-`tools/make_demo_calendars.py` generates placeholder Dogs/Guns/Bikinis calendars, which are already in `content/`. Use them to test the whole pipeline, then replace them with real art by running `build_calendar.py` with the same `--id`.
+**Placeholder for missing years.** When you browse to a year the series has no edition for (say Bikinis 2026), the calendar still works and the picture area shows a placeholder. That's the series' `placeholder.jpg` if it has one, set with:
+
+```sh
+python3 tools/build_calendar.py --series bikinis --placeholder art.png
+```
+
+Otherwise the board draws a retro sunburst with the category, the year, and "COMING SOON".
+
+**Fine-tuning.** The calendar page shows a 240x170 window of each picture. To change which part shows, set `"crop_y"` (0–150) for that month in the edition's `calendar.json`. Tapping the picture always shows the whole image. After editing any JSON by hand or swapping a jpg, run `python3 tools/build_calendar.py --restamp` before committing, so the board notices.
+
+`tools/make_demo_calendars.py` generates placeholder-art editions for testing.
+
+## Custom calendars on the SD card
+
+Calendars copied onto the card are listed **first** in the picker with an **SD** badge, ahead of the GitHub calendars. They're never updated or deleted by the board:
+
+```
+/calendar/custom/<name>/<year>/01.jpg … 12.jpg     required: 240x320 baseline JPEGs
+/calendar/custom/<name>/<year>/calendar.json       optional: edition title, captions
+/calendar/custom/<name>/series.json                optional: title, category
+/calendar/custom/<name>/placeholder.jpg            optional
+```
+
+Without `series.json`, the title comes from the folder name (`smith-family` → "Smith Family") and the category is "Custom". The pictures must be prepared, because the board can't decode full-size photos. The easiest way is to let the build script write straight to the card while it's mounted on your PC:
+
+```sh
+python3 tools/build_calendar.py --sd /media/$USER/CARD --series smith-family \
+    --series-title "Smith Family" --year 2027 --title "Smith Family 2027" \
+    --images ~/Pictures/family-2027/
+```
 
 ## US holidays
 
@@ -118,7 +148,7 @@ g++ -std=c++11 -I src test/host/test_holidays.cpp src/holidays.cpp -o /tmp/th &&
 |------|------|
 | `src/main.cpp` | boot sequence, screens, tap handling |
 | `src/ui.cpp` | drawing: calendar page, full-screen picture, picker, progress |
-| `src/store.cpp` | catalog + SD layout + calendar download |
+| `src/store.cpp` | series/edition catalog, SD layout, custom calendars, incremental downloads |
 | `src/net.cpp` | Wi-Fi, NTP, HTTPS → SD download |
 | `src/settings.cpp` | `/config/wifi.conf` parser + selected calendar (NVS) |
 | `src/touch.cpp` | bit-banged XPT2046 + 3-point calibration (saved in NVS) |

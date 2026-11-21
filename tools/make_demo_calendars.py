@@ -1,25 +1,27 @@
 #!/usr/bin/env python3
-"""Generate placeholder Dogs / Guns / Bikinis calendars so the whole pipeline
+"""Generate placeholder Dogs / Guns / Bikinis editions so the whole pipeline
 (GitHub -> CYD download -> SD card -> display) can be tested before real art exists.
 
-    python3 tools/make_demo_calendars.py [--year 2027]
+    python3 tools/make_demo_calendars.py [--year 2027] [--only dogs guns]
 
-Replace them later by running build_calendar.py with the same --id and real pictures.
+Replace an edition later by running build_calendar.py with the same --series/--year
+and real pictures.
 """
 import argparse
 import math
 
 from PIL import Image, ImageDraw, ImageFont
 
-from build_calendar import H, W, write_calendar
+from build_calendar import CONTENT, H, W, ensure_series, rebuild_catalog, write_edition
 
 MONTHS = ["January", "February", "March", "April", "May", "June",
           "July", "August", "September", "October", "November", "December"]
 
+# series id, series title, category, edition title, colors
 DEMOS = [
-    ("dogs", "Good Boys & Girls", "Dogs", [(245, 190, 80), (200, 90, 40)]),
-    ("guns", "Iron & Walnut", "Guns", [(120, 140, 110), (50, 60, 45)]),
-    ("bikinis", "Sun, Sand & Swimsuits", "Bikinis", [(90, 200, 230), (240, 110, 120)]),
+    ("dogs", "Dog Pin-Ups", "Dogs", "Good Boys & Girls", [(245, 190, 80), (200, 90, 40)]),
+    ("guns", "Gun Pin-Ups", "Guns", "Iron & Walnut", [(120, 140, 110), (50, 60, 45)]),
+    ("bikinis", "Bikini Pin-Ups", "Bikinis", "Sun, Sand & Swimsuits", [(90, 200, 230), (240, 110, 120)]),
 ]
 
 
@@ -53,14 +55,19 @@ def poster(category, month, colors):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--year", type=int, default=2027)
+    ap.add_argument("--only", nargs="+", help="series ids to generate (default: all)")
     a = ap.parse_args()
-    for slug, title, category, colors in DEMOS:
-        cal_id = f"{slug}-{a.year}"
-        print(cal_id)
+    for series_id, series_title, category, title, colors in DEMOS:
+        if a.only and series_id not in a.only:
+            continue
+        print(f"{series_id}/{a.year}")
+        root = CONTENT / "calendars" / series_id
+        ensure_series(root, series_id, series_title, category)
         images = [poster(category, m, colors) for m in range(1, 13)]
         captions = [f"Miss {m}" for m in MONTHS]
         # demo art has its badge near the top, so show rows 30..199 on the calendar page
-        write_calendar(cal_id, title, category, a.year, images, captions, "top", crops=[30] * 12)
+        write_edition(root, a.year, title, images, captions, "top", crops=[30] * 12)
+    rebuild_catalog()
 
 
 if __name__ == "__main__":

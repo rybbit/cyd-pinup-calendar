@@ -1,26 +1,33 @@
 {
-  "format": 1,
-  "calendars": [
+  "format": 2,
+  "series": [
     {
-      "id": "bikinis-2027",
-      "title": "Sun, Sand & Swimsuits",
+      "id": "bikinis",
+      "title": "Bikini Pin-Ups",
       "category": "Bikinis",
-      "year": 2027,
-      "version": "c3019526c106"
+      "version": "b08630df69f1",
+      "years": {
+        "2027": "3ca5a8ed6e99",
+        "2028": "1e48153d5113"
+      }
     },
     {
-      "id": "dogs-2027",
-      "title": "Good Boys & Girls",
+      "id": "dogs",
+      "title": "Dog Pin-Ups",
       "category": "Dogs",
-      "year": 2027,
-      "version": "a0fd72612f92"
+      "version": "6724d213ca8f",
+      "years": {
+        "2027": "82aa74741417"
+      }
     },
     {
-      "id": "guns-2027",
-      "title": "Iron & Walnut",
+      "id": "guns",
+      "title": "Gun Pin-Ups",
       "category": "Guns",
-      "year": 2027,
-      "version": "d31174a2a2db"
+      "version": "16fd8959c783",
+      "years": {
+        "2027": "a777ef13c965"
+      }
     }
   ]
 }

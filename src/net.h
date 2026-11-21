@@ -5,8 +5,10 @@ namespace Net {
 // Connects using settings.ssid / settings.pass (from /config/wifi.conf).
 // Returns true when online.
 bool connect(uint32_t timeoutMs = 20000);
-// Drops the current connection and connects again (after wifi.conf was re-read).
-bool reconnect(uint32_t timeoutMs = 20000);
+// Starts a connection attempt in the background (non-blocking).
+void kick();
+// Starts NTP without waiting.
+void startTimeSync();
 bool online();
 // Starts NTP using settings.tz and waits up to timeoutMs for a valid time.
 bool syncTime(uint32_t timeoutMs = 10000);

@@ -1,0 +1,67 @@
+{
+  "year": 2028,
+  "title": "All-Season Sweethearts",
+  "months": [
+    {
+      "caption": "Miss January",
+      "crop_y": 0,
+      "sha": "94db4bd6636e"
+    },
+    {
+      "caption": "Miss February",
+      "crop_y": 0,
+      "sha": "7504c768acd7"
+    },
+    {
+      "caption": "Miss March",
+      "crop_y": 0,
+      "sha": "bd62170cc567"
+    },
+    {
+      "caption": "Miss April",
+      "crop_y": 0,
+      "sha": "0804e5764e14"
+    },
+    {
+      "caption": "Miss May",
+      "crop_y": 0,
+      "sha": "be205868f436"
+    },
+    {
+      "caption": "Miss June",
+      "crop_y": 0,
+      "sha": "38f0f139f0aa"
+    },
+    {
+      "caption": "Miss July",
+      "crop_y": 0,
+      "sha": "8b8a1a0648dc"
+    },
+    {
+      "caption": "Miss August",
+      "crop_y": 0,
+      "sha": "1b55b2cc2e9b"
+    },
+    {
+      "caption": "Miss September",
+      "crop_y": 0,
+      "sha": "95d3fea0ccc1"
+    },
+    {
+      "caption": "Miss October",
+      "crop_y": 0,
+      "sha": "422f1c953e40"
+    },
+    {
+      "caption": "Miss November",
+      "crop_y": 0,
+      "sha": "a9606f6e9cf3"
+    },
+    {
+      "caption": "Miss December",
+      "crop_y": 0,
+      "sha": "c701740d30f9"
+    }
+  ],
+  "version": "1e48153d5113"
+}

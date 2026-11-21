@@ -1,69 +1,67 @@
 {
-  "id": "dogs-2027",
-  "title": "Good Boys & Girls",
-  "category": "Dogs",
   "year": 2027,
+  "title": "Iron & Walnut",
   "months": [
     {
       "caption": "Miss January",
       "crop_y": 30,
-      "sha": "36ffd3aa7c3c"
+      "sha": "38441aa1440b"
     },
     {
       "caption": "Miss February",
       "crop_y": 30,
-      "sha": "6d7c21f27d36"
+      "sha": "ce5ee7b15d34"
     },
     {
       "caption": "Miss March",
       "crop_y": 30,
-      "sha": "ea22970d0eaa"
+      "sha": "dc18fa4a3803"
     },
     {
       "caption": "Miss April",
       "crop_y": 30,
-      "sha": "cbd6737ca130"
+      "sha": "06a5d58f9796"
     },
     {
       "caption": "Miss May",
       "crop_y": 30,
-      "sha": "d6cf96bcb23b"
+      "sha": "2f9c24f11777"
     },
     {
       "caption": "Miss June",
       "crop_y": 30,
-      "sha": "7812ff6fb8f8"
+      "sha": "85f28d92aa84"
     },
     {
       "caption": "Miss July",
       "crop_y": 30,
-      "sha": "a100ee8d8144"
+      "sha": "f1acd4b954ec"
     },
     {
       "caption": "Miss August",
       "crop_y": 30,
-      "sha": "c804c41057c9"
+      "sha": "c3728b9383d5"
     },
     {
       "caption": "Miss September",
       "crop_y": 30,
-      "sha": "840f728a6824"
+      "sha": "bd3f65d58fc6"
     },
     {
       "caption": "Miss October",
       "crop_y": 30,
-      "sha": "7c1c7e51e248"
+      "sha": "16c10f8207b9"
     },
     {
       "caption": "Miss November",
       "crop_y": 30,
-      "sha": "8850b5f3967b"
+      "sha": "10a887db3cc6"
     },
     {
       "caption": "Miss December",
       "crop_y": 30,
-      "sha": "84045e8c3bd0"
+      "sha": "22d65125fa00"
     }
   ],
-  "version": "a0fd72612f92"
+  "version": "a777ef13c965"
 }

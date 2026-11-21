@@ -1,24 +1,39 @@
 #!/usr/bin/env python3
-"""Turn 12 pictures into a pin-up calendar the CYD can download.
+"""Build pin-up calendar editions for the CYD.
 
-    python3 tools/build_calendar.py \
-        --id dogs-2027 --title "Good Boys & Girls" --category Dogs --year 2027 \
-        --images ~/Pictures/dogs/            # 12 images, sorted by filename = Jan..Dec
-        [--captions captions.txt]            # optional, 12 lines ("Miss January - Biscuit")
-        [--focus top|center|bottom]          # where to crop if the aspect ratio differs
+A calendar is a SERIES (e.g. "bikinis") with one EDITION per year:
 
-Writes content/calendars/<id>/01.jpg..12.jpg + calendar.json and adds/updates the
-entry in content/catalog.json. Commit and push content/ and every CYD can pick it up.
+    content/calendars/<series>/series.json          series title + category
+    content/calendars/<series>/placeholder.jpg      optional, shown for years with no edition
+    content/calendars/<series>/<year>/01.jpg..12.jpg + calendar.json
 
-Each calendar gets a "version" (in catalog.json and calendar.json) and each month a
-"sha" fingerprint of its image. The CYD compares them with its SD copy and downloads
-only what changed. After hand-editing a calendar.json or swapping a jpg, run
-    python3 tools/build_calendar.py --restamp
-to refresh the fingerprints and versions.
+Add a year's edition (12 images, sorted by filename = Jan..Dec):
 
-Each image becomes a 240x320 baseline JPEG (the decoder on the ESP32 cannot read
-progressive JPEGs). The calendar page shows a 240x170 window of it; per-month
-"crop_y" in calendar.json (0..150) picks which rows show. Requires Pillow.
+    python3 tools/build_calendar.py --series bikinis --year 2028 \\
+        --title "Beach Party" --images ~/Pictures/bikinis-2028/ \\
+        [--captions captions.txt]          # up to 12 lines ("Miss January - Betty")
+        [--focus top|center|bottom]        # crop position if the aspect ratio differs
+        [--series-title "Bikini Pin-Ups" --category Bikinis]   # needed for a new series
+
+Set a series placeholder picture:
+
+    python3 tools/build_calendar.py --series bikinis --placeholder art.png
+
+Write a CUSTOM calendar straight to an SD card (shown first on the CYD, never
+updated from GitHub) by adding --sd <card mount point> to either command:
+
+    python3 tools/build_calendar.py --sd /media/$USER/CARD --series smith-family \\
+        --series-title "Smith Family" --year 2027 --title "Smith Family 2027" \\
+        --images ~/Pictures/family/
+
+Without --sd, content/catalog.json is rebuilt; commit and push content/ and every
+CYD picks the change up. Every edition gets a "version" and each month a "sha"
+fingerprint, so the CYD downloads only what changed. After hand-editing a JSON file
+or swapping a jpg, run  python3 tools/build_calendar.py --restamp
+
+Each image becomes a 240x320 baseline JPEG (the ESP32 decoder cannot read progressive
+JPEGs). The calendar page shows a 240x170 window of it; per-month "crop_y" (0..150)
+in calendar.json picks which rows show. Requires Pillow.
 """
 import argparse
 import hashlib
@@ -34,10 +49,13 @@ VIEW_H = 170
 MAX_BYTES = 120 * 1024
 EXTS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".gif", ".tif", ".tiff"}
 CONTENT = Path(__file__).resolve().parent.parent / "content"
+ID_RE = re.compile(r"[A-Za-z0-9_-]{1,40}")
 
 
 def fit(img: Image.Image, focus: str) -> Image.Image:
     img = ImageOps.exif_transpose(img).convert("RGB")
+    if img.size == (W, H):
+        return img
     centering = {"top": (0.5, 0.15), "center": (0.5, 0.5), "bottom": (0.5, 0.85)}[focus]
     return ImageOps.fit(img, (W, H), Image.LANCZOS, centering=centering)
 
@@ -54,77 +72,169 @@ def default_crop(focus: str) -> int:
     return {"top": 0, "center": (H - VIEW_H) // 2, "bottom": H - VIEW_H}[focus]
 
 
-def write_calendar(cal_id, title, category, year, images, captions, focus, crops=None):
-    if not re.fullmatch(r"[A-Za-z0-9_-]{1,40}", cal_id):
-        sys.exit("id must be 1-40 chars of letters, digits, - or _")
-    out = CONTENT / "calendars" / cal_id
-    out.mkdir(parents=True, exist_ok=True)
+def short_hash(data: bytes) -> str:
+    return hashlib.sha1(data).hexdigest()[:12]
 
+
+def read_json(path: Path) -> dict:
+    return json.loads(path.read_text()) if path.exists() else {}
+
+
+def write_json(path: Path, data: dict):
+    path.write_text(json.dumps(data, indent=2) + "\n")
+
+
+# ---------------------------------------------------------------- series / editions
+
+def ensure_series(root: Path, series_id: str, title=None, category=None, custom=False):
+    if not ID_RE.fullmatch(series_id) or series_id == "custom":
+        sys.exit("series id must be 1-40 letters, digits, - or _ (and not 'custom')")
+    root.mkdir(parents=True, exist_ok=True)
+    path = root / "series.json"
+    meta = read_json(path)
+    if not meta and not (title and category) and not custom:
+        sys.exit(f"new series '{series_id}': also pass --series-title and --category")
+    meta["id"] = series_id
+    if title:
+        meta["title"] = title
+    if category:
+        meta["category"] = category
+    meta.setdefault("title", series_id.replace("-", " ").replace("_", " ").title())
+    meta.setdefault("category", "Custom")
+    write_json(path, meta)
+    stamp_series(root)
+
+
+def write_edition(root: Path, year: int, title: str, images, captions, focus, crops=None):
+    out = root / str(year)
+    out.mkdir(parents=True, exist_ok=True)
     months = []
     for i, img in enumerate(images):
-        size = save_jpeg(fit(img, focus) if img.size != (W, H) else img.convert("RGB"), out / f"{i + 1:02d}.jpg")
+        size = save_jpeg(fit(img, focus), out / f"{i + 1:02d}.jpg")
         crop = crops[i] if crops else default_crop(focus)
         months.append({"caption": captions[i] if i < len(captions) else "", "crop_y": crop})
-        print(f"  {i + 1:02d}.jpg  {size // 1024} KB")
-
-    meta = {"id": cal_id, "title": title, "category": category, "year": year, "months": months}
-    (out / "calendar.json").write_text(json.dumps(meta, indent=2) + "\n")
-    stamp(out)
-    print(f"Wrote {out} and updated {CONTENT / 'catalog.json'}")
+        print(f"  {year}/{i + 1:02d}.jpg  {size // 1024} KB")
+    write_json(out / "calendar.json", {"year": year, "title": title, "months": months})
+    stamp_edition(out)
 
 
-def file_sha(path: Path) -> str:
-    return hashlib.sha1(path.read_bytes()).hexdigest()[:12]
+def write_placeholder(root: Path, img: Image.Image):
+    size = save_jpeg(fit(img, "center"), root / "placeholder.jpg")
+    print(f"  placeholder.jpg  {size // 1024} KB")
+    stamp_series(root)
 
 
-def stamp(cal_dir: Path) -> str:
-    """Write per-month image fingerprints and a calendar version, and sync the catalog entry."""
-    meta_path = cal_dir / "calendar.json"
-    meta = json.loads(meta_path.read_text())
+# ---------------------------------------------------------------- fingerprints
+
+def stamp_edition(year_dir: Path) -> str:
+    path = year_dir / "calendar.json"
+    meta = read_json(path)
     for i, m in enumerate(meta["months"]):
-        m["sha"] = file_sha(cal_dir / f"{i + 1:02d}.jpg")
-    basis = {k: meta[k] for k in ("title", "category", "year", "months")}
-    meta["version"] = hashlib.sha1(json.dumps(basis, sort_keys=True).encode()).hexdigest()[:12]
-    meta_path.write_text(json.dumps(meta, indent=2) + "\n")
-
-    catalog_path = CONTENT / "catalog.json"
-    catalog = json.loads(catalog_path.read_text()) if catalog_path.exists() else {"format": 1, "calendars": []}
-    entry = {"id": meta["id"], "title": meta["title"], "category": meta["category"], "year": meta["year"],
-             "version": meta["version"]}
-    catalog["calendars"] = [c for c in catalog["calendars"] if c["id"] != meta["id"]] + [entry]
-    catalog["calendars"].sort(key=lambda c: (c["category"], -c.get("year", 0), c["title"]))
-    catalog_path.write_text(json.dumps(catalog, indent=2) + "\n")
+        m["sha"] = short_hash((year_dir / f"{i + 1:02d}.jpg").read_bytes())
+    basis = {k: meta.get(k) for k in ("year", "title", "months")}
+    meta["version"] = short_hash(json.dumps(basis, sort_keys=True).encode())
+    write_json(path, meta)
     return meta["version"]
 
 
+def stamp_series(root: Path) -> str:
+    path = root / "series.json"
+    meta = read_json(path)
+    ph = root / "placeholder.jpg"
+    if ph.exists():
+        meta["placeholder_sha"] = short_hash(ph.read_bytes())
+    else:
+        meta.pop("placeholder_sha", None)
+    basis = {k: meta.get(k) for k in ("title", "category", "placeholder_sha")}
+    meta["version"] = short_hash(json.dumps(basis, sort_keys=True).encode())
+    write_json(path, meta)
+    return meta["version"]
+
+
+def edition_years(root: Path):
+    return sorted(int(d.name) for d in root.iterdir()
+                  if d.is_dir() and re.fullmatch(r"\d{4}", d.name) and (d / "calendar.json").exists())
+
+
+def rebuild_catalog():
+    series = []
+    for root in sorted((CONTENT / "calendars").iterdir()):
+        if not (root / "series.json").exists():
+            continue
+        meta = read_json(root / "series.json")
+        years = {str(y): read_json(root / str(y) / "calendar.json")["version"] for y in edition_years(root)}
+        series.append({"id": root.name, "title": meta["title"], "category": meta["category"],
+                       "version": meta["version"], "years": years})
+    series.sort(key=lambda s: (s["category"], s["title"]))
+    write_json(CONTENT / "catalog.json", {"format": 2, "series": series})
+    print(f"Updated {CONTENT / 'catalog.json'} ({len(series)} series)")
+
+
 def restamp_all():
-    for cal_dir in sorted((CONTENT / "calendars").iterdir()):
-        if (cal_dir / "calendar.json").exists():
-            print(f"{cal_dir.name}: version {stamp(cal_dir)}")
+    for root in sorted((CONTENT / "calendars").iterdir()):
+        if not (root / "series.json").exists():
+            continue
+        stamp_series(root)
+        for y in edition_years(root):
+            print(f"{root.name}/{y}: version {stamp_edition(root / str(y))}")
+    rebuild_catalog()
 
 
-def main():
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--restamp", action="store_true", help="refresh versions of every calendar in content/")
-    ap.add_argument("--id", required=True, help="folder name, e.g. dogs-2027")
-    ap.add_argument("--title", required=True)
-    ap.add_argument("--category", required=True, help="e.g. Dogs, Guns, Bikinis")
-    ap.add_argument("--year", type=int, required=True)
-    ap.add_argument("--images", required=True, nargs="+", help="a folder, or 12 files in Jan..Dec order")
-    ap.add_argument("--captions", help="text file with up to 12 lines")
-    ap.add_argument("--focus", choices=["top", "center", "bottom"], default="top")
-    if "--restamp" in sys.argv[1:]:
-        restamp_all()
-        return
-    a = ap.parse_args()
+# ---------------------------------------------------------------- CLI
 
-    paths = [Path(p).expanduser() for p in a.images]
+def load_images(args):
+    paths = [Path(p).expanduser() for p in args]
     if len(paths) == 1 and paths[0].is_dir():
         paths = sorted(p for p in paths[0].iterdir() if p.suffix.lower() in EXTS)
     if len(paths) != 12:
         sys.exit(f"need exactly 12 images, got {len(paths)}")
-    captions = Path(a.captions).read_text().splitlines()[:12] if a.captions else []
-    write_calendar(a.id, a.title, a.category, a.year, [Image.open(p) for p in paths], captions, a.focus)
+    return [Image.open(p) for p in paths]
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--restamp", action="store_true", help="refresh fingerprints and rebuild catalog.json")
+    ap.add_argument("--series", help="series id, e.g. bikinis")
+    ap.add_argument("--series-title", help="series name shown in the picker")
+    ap.add_argument("--category", help="e.g. Dogs, Guns, Bikinis")
+    ap.add_argument("--year", type=int)
+    ap.add_argument("--title", help="this year's edition title")
+    ap.add_argument("--images", nargs="+", help="a folder, or 12 files in Jan..Dec order")
+    ap.add_argument("--captions", help="text file with up to 12 lines")
+    ap.add_argument("--focus", choices=["top", "center", "bottom"], default="top")
+    ap.add_argument("--placeholder", help="image shown for years with no edition")
+    ap.add_argument("--sd", help="SD card mount point: write a custom calendar there instead of content/")
+    a = ap.parse_args()
+
+    if a.restamp:
+        restamp_all()
+        return
+    if not a.series:
+        ap.error("--series is required")
+    custom = bool(a.sd)
+    if custom:
+        sd = Path(a.sd).expanduser()
+        if not sd.is_dir():
+            sys.exit(f"{sd} is not a directory (is the SD card mounted?)")
+        root = sd / "calendar" / "custom" / a.series
+    else:
+        root = CONTENT / "calendars" / a.series
+
+    ensure_series(root, a.series, a.series_title, a.category, custom)
+    if a.placeholder:
+        write_placeholder(root, Image.open(Path(a.placeholder).expanduser()))
+    if a.images:
+        if not a.year or not a.title:
+            ap.error("--images needs --year and --title")
+        captions = Path(a.captions).read_text().splitlines()[:12] if a.captions else []
+        write_edition(root, a.year, a.title, load_images(a.images), captions, a.focus)
+    elif not a.placeholder:
+        ap.error("nothing to do: pass --images and/or --placeholder")
+
+    if custom:
+        print(f"Wrote custom calendar to {root}")
+    else:
+        rebuild_catalog()
 
 
 if __name__ == "__main__":

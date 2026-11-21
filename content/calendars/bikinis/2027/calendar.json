@@ -1,8 +1,6 @@
 {
-  "id": "bikinis-2027",
-  "title": "Sun, Sand & Swimsuits",
-  "category": "Bikinis",
   "year": 2027,
+  "title": "Sun, Sand & Swimsuits",
   "months": [
     {
       "caption": "Miss January",
@@ -65,5 +63,5 @@
       "sha": "88a07d2a35b5"
     }
   ],
-  "version": "c3019526c106"
+  "version": "3ca5a8ed6e99"
 }

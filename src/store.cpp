@@ -15,8 +15,10 @@ SPIClass sdSpi(VSPI);
 bool sdMounted = false;
 
 const int16_t DEFAULT_CROP_Y = 0;
+const char *CUSTOM = "custom";
 
-String calDir(const String &id) { return String(CAL_ROOT) + "/" + id; }
+String seriesDir(const String &id) { return String(CAL_ROOT) + "/" + id; }
+String yearDir(const String &id, int year) { return seriesDir(id) + "/" + String(year); }
 
 // Directory URL that catalog.json lives in, with trailing slash.
 String baseUrl() {
@@ -25,11 +27,24 @@ String baseUrl() {
   return slash >= 0 ? u.substring(0, slash + 1) : u + "/";
 }
 
-bool validId(const String &id) {
+bool validName(const String &id) {
   if (id.isEmpty() || id.length() > 40) return false;
   for (char c : id)
     if (!(isalnum((unsigned char)c) || c == '-' || c == '_')) return false;
   return true;
+}
+
+bool validSeriesId(const String &id) { return validName(id) && id != CUSTOM; }
+
+// "bikinis" or "custom/<name>"
+bool validKey(const String &key) {
+  if (key.startsWith("custom/")) return validName(key.substring(7));
+  return validSeriesId(key);
+}
+
+String baseName(const String &path) {
+  int slash = path.lastIndexOf('/');
+  return slash >= 0 ? path.substring(slash + 1) : path;
 }
 
 bool fileNonEmpty(const String &path) {
@@ -40,180 +55,79 @@ bool fileNonEmpty(const String &path) {
   f.close();
   return ok;
 }
-}  // namespace
 
-namespace Store {
-
-bool mountSD() {
-  sdSpi.begin(SD_SCK, SD_MISO, SD_MOSI, SD_CS);
-  sdMounted = SD.begin(SD_CS, sdSpi, 20000000);
-  if (sdMounted && !SD.exists(CAL_ROOT)) SD.mkdir(CAL_ROOT);
-  return sdMounted;
-}
-
-bool sdOk() { return sdMounted; }
-
-String imagePath(const String &id, int month) {
-  char name[8];
-  snprintf(name, sizeof(name), "/%02d.jpg", month);
-  return calDir(id) + name;
-}
-
-bool isDownloaded(const String &id) {
-  if (!fileNonEmpty(calDir(id) + "/calendar.json")) return false;
-  for (int m = 1; m <= 12; m++)
-    if (!fileNonEmpty(imagePath(id, m))) return false;
-  return true;
-}
-
-std::vector<CatalogEntry> loadCatalog() {
-  std::vector<CatalogEntry> list;
-
-  File f = SD.open(CATALOG_PATH);
-  if (f) {
-    JsonDocument filter;
-    JsonObject fe = filter["calendars"].add<JsonObject>();
-    fe["id"] = true;
-    fe["title"] = true;
-    fe["category"] = true;
-    fe["year"] = true;
-    fe["path"] = true;
-    fe["version"] = true;
-    JsonDocument doc;
-    DeserializationError err = deserializeJson(doc, f, DeserializationOption::Filter(filter));
-    f.close();
-    if (err) Serial.printf("catalog.json: %s\n", err.c_str());
-    for (JsonObject c : doc["calendars"].as<JsonArray>()) {
-      CatalogEntry e;
-      e.id = c["id"] | "";
-      if (!validId(e.id)) continue;
-      e.title = c["title"] | e.id.c_str();
-      e.category = c["category"] | "Misc";
-      e.year = c["year"] | 0;
-      e.version = c["version"] | "";
-      e.path = c["path"] | ("calendars/" + e.id + "/").c_str();
-      if (!e.path.endsWith("/")) e.path += "/";
-      list.push_back(e);
+// "beach-babes_2" -> "Beach Babes 2"
+String prettify(const String &name) {
+  String out;
+  bool up = true;
+  for (char c : name) {
+    if (c == '-' || c == '_') {
+      out += ' ';
+      up = true;
+    } else {
+      out += up ? (char)toupper((unsigned char)c) : c;
+      up = false;
     }
   }
-
-  // Add calendars that are on the card but not (or no longer) in the catalog.
-  File root = SD.open(CAL_ROOT);
-  if (root) {
-    for (File d = root.openNextFile(); d; d = root.openNextFile()) {
-      if (d.isDirectory()) {
-        String id = d.name();
-        int slash = id.lastIndexOf('/');
-        if (slash >= 0) id = id.substring(slash + 1);
-        bool known = std::any_of(list.begin(), list.end(), [&](const CatalogEntry &e) { return e.id == id; });
-        CalendarMeta meta;
-        if (!known && validId(id) && loadMeta(id, meta)) {
-          CatalogEntry e;
-          e.id = id;
-          e.title = meta.title;
-          e.category = meta.category;
-          e.year = meta.year;
-          e.path = "calendars/" + id + "/";
-          list.push_back(e);
-        }
-      }
-      d.close();
-    }
-    root.close();
-  }
-
-  for (auto &e : list) {
-    e.downloaded = isDownloaded(e.id);
-    CalendarMeta m;
-    if (e.downloaded && loadMeta(e.id, m)) e.localVersion = m.version;
-  }
-
-  std::sort(list.begin(), list.end(), [](const CatalogEntry &a, const CatalogEntry &b) {
-    if (a.category != b.category) return a.category < b.category;
-    if (a.year != b.year) return a.year > b.year;  // newest first
-    return a.title < b.title;
-  });
-  return list;
+  return out;
 }
 
-bool refreshCatalog() {
-  if (!Net::online()) return false;
-  return Net::download(settings.catalogUrl, CATALOG_PATH) > 0;
-}
-
-bool findEntry(const String &id, CatalogEntry &out) {
-  for (auto &e : loadCatalog())
-    if (e.id == id) {
-      out = e;
-      return true;
-    }
-  return false;
-}
-
-bool downloadCalendar(const CatalogEntry &e, Progress progress) {
-  if (!validId(e.id)) return false;
-  String dir = calDir(e.id);
-  if (!SD.exists(dir)) SD.mkdir(dir);
-  String remote = e.path.startsWith("http") ? e.path : baseUrl() + e.path;
-  String metaPath = dir + "/calendar.json";
-  String newMetaPath = dir + "/calendar.new";
-
-  // Work out which images need fetching before downloading anything.
-  CalendarMeta oldMeta, newMeta;
-  bool haveOld = loadMeta(e.id, oldMeta);
-  if (Net::download(remote + "calendar.json", newMetaPath) <= 0) return false;
-  if (!loadMetaFile(newMetaPath, e.id, newMeta)) return false;
-
-  bool need[12];
-  int total = 1;
-  for (int m = 1; m <= 12; m++) {
-    const String &now = newMeta.sha[m - 1];
-    bool changed = haveOld && (now.isEmpty() ? oldMeta.version != newMeta.version : oldMeta.sha[m - 1] != now);
-    need[m - 1] = !fileNonEmpty(imagePath(e.id, m)) || changed;
-    total += need[m - 1];
+std::vector<String> listDirs(const String &path) {
+  std::vector<String> names;
+  if (!SD.exists(path)) return names;
+  File root = SD.open(path);
+  if (!root) return names;
+  for (File d = root.openNextFile(); d; d = root.openNextFile()) {
+    if (d.isDirectory()) names.push_back(baseName(d.name()));
+    d.close();
   }
-  int done = 0;
-  if (progress) progress(done, total);
-  if (progress) progress(++done, total);
-
-  bool allOk = true;
-  for (int m = 1; m <= 12; m++) {
-    if (!need[m - 1]) continue;
-    char name[8];
-    snprintf(name, sizeof(name), "%02d.jpg", m);
-    String path = imagePath(e.id, m);
-    // one retry for flaky Wi-Fi
-    if (Net::download(remote + name, path) <= 0 && Net::download(remote + name, path) <= 0) allOk = false;
-    if (progress) progress(++done, total);
-  }
-  if (!allOk) return false;  // keep the old calendar.json so the changed images are retried
-  SD.remove(metaPath);
-  return SD.rename(newMetaPath, metaPath);
+  root.close();
+  return names;
 }
 
-bool loadMeta(const String &id, CalendarMeta &meta) { return loadMetaFile(calDir(id) + "/calendar.json", id, meta); }
+std::vector<int> scanYears(const String &id) {
+  std::vector<int> years;
+  for (auto &n : listDirs(seriesDir(id))) {
+    if (n.length() != 4) continue;
+    int y = n.toInt();
+    if (y >= 1900 && y <= 2999) years.push_back(y);
+  }
+  std::sort(years.begin(), years.end());
+  return years;
+}
 
-bool loadMetaFile(const String &path, const String &id, CalendarMeta &meta) {
-  meta = CalendarMeta();
-  meta.id = id;
-  for (int i = 0; i < 12; i++) meta.cropY[i] = DEFAULT_CROP_Y;
-
+bool readJson(const String &path, JsonDocument &doc) {
   if (!SD.exists(path)) return false;
   File f = SD.open(path);
   if (!f) return false;
-  JsonDocument doc;
   DeserializationError err = deserializeJson(doc, f);
   f.close();
-  if (err) return false;
+  if (err) Serial.printf("%s: %s\n", path.c_str(), err.c_str());
+  return !err;
+}
 
-  meta.title = doc["title"] | id.c_str();
-  meta.category = doc["category"] | "Misc";
-  meta.year = doc["year"] | 0;
+String readVersion(const String &path) {
+  JsonDocument doc;
+  return readJson(path, doc) ? String(doc["version"] | "") : String();
+}
+
+bool yearDownloaded(const String &id, int year) {
+  if (!fileNonEmpty(yearDir(id, year) + "/calendar.json")) return false;
+  for (int m = 1; m <= 12; m++)
+    if (!fileNonEmpty(Store::imagePath(id, year, m))) return false;
+  return true;
+}
+
+bool loadMetaFile(const String &path, int year, CalendarMeta &meta) {
+  meta = CalendarMeta();
+  meta.year = year;
+  for (int i = 0; i < 12; i++) meta.cropY[i] = DEFAULT_CROP_Y;
+  JsonDocument doc;
+  if (!readJson(path, doc)) return false;
+  meta.title = doc["title"] | "";
   meta.version = doc["version"] | "";
-
-  JsonArray months = doc["months"].as<JsonArray>();
   int i = 0;
-  for (JsonVariant mv : months) {
+  for (JsonVariant mv : doc["months"].as<JsonArray>()) {
     if (i >= 12) break;
     if (mv.is<const char *>()) {
       meta.captions[i] = mv.as<const char *>();
@@ -227,13 +141,278 @@ bool loadMetaFile(const String &path, const String &id, CalendarMeta &meta) {
   return true;
 }
 
-bool removeCalendar(const String &id) {
-  if (!validId(id)) return false;
-  String dir = calDir(id);
-  for (int m = 1; m <= 12; m++) SD.remove(imagePath(id, m));
-  SD.remove(dir + "/calendar.json");
-  SD.remove(dir + "/calendar.new");
-  return SD.rmdir(dir);
+bool downloadTwice(const String &url, const String &path) {  // one retry for flaky Wi-Fi
+  return Net::download(url, path) > 0 || Net::download(url, path) > 0;
+}
+
+void removeYearFiles(const String &dir) {
+  for (int m = 1; m <= 12; m++) {
+    char name[8];
+    snprintf(name, sizeof(name), "/%02d.jpg", m);
+    if (SD.exists(dir + name)) SD.remove(dir + name);
+  }
+  for (const char *f : {"/calendar.json", "/calendar.new"})
+    if (SD.exists(dir + f)) SD.remove(dir + f);
+}
+
+bool downloadYear(const String &remoteSeries, const String &id, int year, Store::Progress progress) {
+  String dir = yearDir(id, year);
+  if (!SD.exists(dir)) SD.mkdir(dir);
+  String remote = remoteSeries + String(year) + "/";
+  String label = String(year) + " edition";
+  String metaPath = dir + "/calendar.json";
+  String newMetaPath = dir + "/calendar.new";
+
+  // Work out which images need fetching before downloading any.
+  CalendarMeta oldMeta, newMeta;
+  bool haveOld = loadMetaFile(metaPath, year, oldMeta);
+  if (Net::download(remote + "calendar.json", newMetaPath) <= 0) return false;
+  if (!loadMetaFile(newMetaPath, year, newMeta)) return false;
+
+  bool need[12];
+  int total = 1;
+  for (int m = 1; m <= 12; m++) {
+    const String &now = newMeta.sha[m - 1];
+    bool changed = haveOld && (now.isEmpty() ? oldMeta.version != newMeta.version : oldMeta.sha[m - 1] != now);
+    need[m - 1] = !fileNonEmpty(Store::imagePath(id, year, m)) || changed;
+    total += need[m - 1];
+  }
+  int done = 1;
+  if (progress) progress(label, done, total);
+
+  bool allOk = true;
+  for (int m = 1; m <= 12; m++) {
+    if (!need[m - 1]) continue;
+    char name[8];
+    snprintf(name, sizeof(name), "%02d.jpg", m);
+    if (!downloadTwice(remote + name, Store::imagePath(id, year, m))) allOk = false;
+    if (progress) progress(label, ++done, total);
+  }
+  if (!allOk) return false;  // keep the old calendar.json so changed images are retried
+  if (SD.exists(metaPath)) SD.remove(metaPath);
+  return SD.rename(newMetaPath, metaPath);
+}
+}  // namespace
+
+// ---------------------------------------------------------------- SeriesEntry
+
+bool SeriesEntry::downloaded() const {
+  if (custom) return true;
+  if (localVersion.isEmpty()) return false;
+  for (auto &y : years)
+    if (!y.downloaded) return false;
+  return true;
+}
+
+bool SeriesEntry::updateAvailable() const {
+  if (custom || localVersion.isEmpty()) return false;
+  if (version.length() && version != localVersion) return true;
+  for (auto &y : years)
+    if (!y.downloaded || (y.version.length() && y.version != y.localVersion)) return true;
+  return false;
+}
+
+String SeriesEntry::yearsLabel() const {
+  if (years.empty()) return "";
+  int lo = years.front().year, hi = years.back().year;
+  return lo == hi ? String(lo) : String(lo) + "-" + String(hi);
+}
+
+// ---------------------------------------------------------------- Store
+
+namespace Store {
+
+bool mountSD() {
+  sdSpi.begin(SD_SCK, SD_MISO, SD_MOSI, SD_CS);
+  sdMounted = SD.begin(SD_CS, sdSpi, 20000000);
+  if (sdMounted && !SD.exists(CAL_ROOT)) SD.mkdir(CAL_ROOT);
+  return sdMounted;
+}
+
+bool sdOk() { return sdMounted; }
+
+String imagePath(const String &id, int year, int month) {
+  char name[8];
+  snprintf(name, sizeof(name), "/%02d.jpg", month);
+  return yearDir(id, year) + name;
+}
+
+String placeholderPath(const String &id) { return seriesDir(id) + "/placeholder.jpg"; }
+
+void cleanupLegacy() {
+  for (auto &name : listDirs(CAL_ROOT)) {
+    if (name == CUSTOM || !validName(name)) continue;
+    String dir = seriesDir(name);
+    if (!SD.exists(dir + "/calendar.json")) continue;  // new-style series keep it in year folders
+    Serial.printf("Removing old-layout calendar %s\n", dir.c_str());
+    removeYearFiles(dir);
+    SD.rmdir(dir);
+  }
+}
+
+bool loadSeries(const String &id, SeriesInfo &out) {
+  out = SeriesInfo();
+  if (!validKey(id) || !SD.exists(seriesDir(id))) return false;
+  out.id = id;
+  out.custom = id.startsWith("custom/");
+  JsonDocument doc;
+  bool haveJson = readJson(seriesDir(id) + "/series.json", doc);
+  if (!haveJson && !out.custom) return false;
+  out.title = doc["title"] | "";
+  out.category = doc["category"] | "";
+  if (out.title.isEmpty()) out.title = prettify(baseName(id));
+  if (out.category.isEmpty()) out.category = out.custom ? "Custom" : "Misc";
+  out.hasPlaceholder = fileNonEmpty(placeholderPath(id));
+  out.years = scanYears(id);
+  return true;
+}
+
+bool loadYear(const String &id, int year, CalendarMeta &out) {
+  String dir = yearDir(id, year);
+  if (!SD.exists(dir)) return false;
+  if (!loadMetaFile(dir + "/calendar.json", year, out)) {
+    // Custom calendars may skip calendar.json; any images in the folder will do.
+    if (!id.startsWith("custom/")) return false;
+    for (int m = 1; m <= 12; m++)
+      if (fileNonEmpty(imagePath(id, year, m))) return true;
+    return false;
+  }
+  return true;
+}
+
+std::vector<SeriesEntry> loadCatalog() {
+  std::vector<SeriesEntry> custom, list;
+
+  // 1. Custom calendars on the SD card
+  for (auto &name : listDirs(String(CAL_ROOT) + "/" + CUSTOM)) {
+    SeriesInfo info;
+    if (!validName(name) || !loadSeries(String("custom/") + name, info)) continue;
+    SeriesEntry e;
+    e.id = info.id;
+    e.title = info.title;
+    e.category = info.category;
+    e.custom = true;
+    for (int y : info.years) {
+      YearEntry ye;
+      ye.year = y;
+      ye.downloaded = true;
+      e.years.push_back(ye);
+    }
+    custom.push_back(e);
+  }
+
+  // 2. Cached catalog
+  JsonDocument filter;
+  JsonObject fe = filter["series"].add<JsonObject>();
+  for (const char *k : {"id", "title", "category", "version", "path", "years"}) fe[k] = true;
+  JsonDocument doc;
+  if (SD.exists(CATALOG_PATH)) {
+    File f = SD.open(CATALOG_PATH);
+    if (f) {
+      DeserializationError err = deserializeJson(doc, f, DeserializationOption::Filter(filter));
+      f.close();
+      if (err) Serial.printf("catalog.json: %s\n", err.c_str());
+    }
+  }
+  for (JsonObject s : doc["series"].as<JsonArray>()) {
+    SeriesEntry e;
+    e.id = s["id"] | "";
+    if (!validSeriesId(e.id)) continue;
+    e.title = s["title"] | e.id.c_str();
+    e.category = s["category"] | "Misc";
+    e.version = s["version"] | "";
+    e.path = s["path"] | "";
+    if (e.path.isEmpty()) e.path = "calendars/" + e.id + "/";
+    if (!e.path.endsWith("/")) e.path += "/";
+    e.localVersion = readVersion(seriesDir(e.id) + "/series.json");
+    for (JsonPair kv : s["years"].as<JsonObject>()) {
+      YearEntry ye;
+      ye.year = atoi(kv.key().c_str());
+      if (ye.year < 1900 || ye.year > 2999) continue;
+      ye.version = kv.value() | "";
+      ye.localVersion = readVersion(yearDir(e.id, ye.year) + "/calendar.json");
+      ye.downloaded = yearDownloaded(e.id, ye.year);
+      e.years.push_back(ye);
+    }
+    std::sort(e.years.begin(), e.years.end(), [](const YearEntry &a, const YearEntry &b) { return a.year < b.year; });
+    list.push_back(e);
+  }
+
+  // 3. Series on the card that the catalog no longer lists
+  for (auto &name : listDirs(CAL_ROOT)) {
+    if (!validSeriesId(name)) continue;
+    if (std::any_of(list.begin(), list.end(), [&](const SeriesEntry &e) { return e.id == name; })) continue;
+    SeriesInfo info;
+    if (!loadSeries(name, info) || info.years.empty()) continue;
+    SeriesEntry e;
+    e.id = name;
+    e.title = info.title;
+    e.category = info.category;
+    e.localVersion = e.version = readVersion(seriesDir(name) + "/series.json");
+    if (e.localVersion.isEmpty()) e.localVersion = e.version = "local";
+    for (int y : info.years) {
+      YearEntry ye;
+      ye.year = y;
+      ye.downloaded = yearDownloaded(name, y);
+      ye.version = ye.localVersion = readVersion(yearDir(name, y) + "/calendar.json");
+      if (ye.downloaded) e.years.push_back(ye);
+    }
+    if (!e.years.empty()) list.push_back(e);
+  }
+
+  std::sort(custom.begin(), custom.end(), [](const SeriesEntry &a, const SeriesEntry &b) { return a.title < b.title; });
+  std::sort(list.begin(), list.end(), [](const SeriesEntry &a, const SeriesEntry &b) {
+    if (a.category != b.category) return a.category < b.category;
+    return a.title < b.title;
+  });
+  custom.insert(custom.end(), list.begin(), list.end());  // custom calendars first
+  return custom;
+}
+
+bool refreshCatalog() {
+  if (!Net::online()) return false;
+  return Net::download(settings.catalogUrl, CATALOG_PATH) > 0;
+}
+
+bool findEntry(const String &id, SeriesEntry &out) {
+  for (auto &e : loadCatalog())
+    if (e.id == id) {
+      out = e;
+      return true;
+    }
+  return false;
+}
+
+bool downloadSeries(const SeriesEntry &e, Progress progress) {
+  if (e.custom || !validSeriesId(e.id)) return false;
+  String dir = seriesDir(e.id);
+  if (!SD.exists(dir)) SD.mkdir(dir);
+  String remote = e.path.startsWith("http") ? e.path : baseUrl() + e.path;
+
+  // series.json + placeholder
+  String sPath = dir + "/series.json", sNew = dir + "/series.new";
+  if (e.version.isEmpty() || e.version != e.localVersion || !fileNonEmpty(sPath)) {
+    if (progress) progress("Series info", 0, 1);
+    JsonDocument oldDoc, newDoc;
+    readJson(sPath, oldDoc);
+    if (Net::download(remote + "series.json", sNew) <= 0 || !readJson(sNew, newDoc)) return false;
+    String oldSha = oldDoc["placeholder_sha"] | "";
+    String newSha = newDoc["placeholder_sha"] | "";
+    String ph = placeholderPath(e.id);
+    if (newSha.length()) {
+      if ((newSha != oldSha || !fileNonEmpty(ph)) && !downloadTwice(remote + "placeholder.jpg", ph)) return false;
+    } else if (SD.exists(ph)) {
+      SD.remove(ph);
+    }
+    if (SD.exists(sPath)) SD.remove(sPath);
+    if (!SD.rename(sNew, sPath)) return false;
+    if (progress) progress("Series info", 1, 1);
+  }
+
+  bool ok = true;
+  for (auto &y : e.years)
+    if (!y.downloaded || y.version != y.localVersion) ok &= downloadYear(remote, e.id, y.year, progress);
+  return ok;
 }
 
 }  // namespace Store

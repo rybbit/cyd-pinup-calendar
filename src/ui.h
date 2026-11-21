@@ -37,18 +37,20 @@ void begin();
 
 // --- calendar page ---
 enum CalHit { HIT_NONE, HIT_PREV, HIT_NEXT, HIT_TITLE, HIT_IMAGE, HIT_DAY, HIT_STATUS };
-void drawCalendarPage(const CalendarMeta &meta, int year, int month, const DateYMD &today, int selDay);
-void drawCalendarImage(const CalendarMeta &meta, int month);
+// meta == nullptr means the series has no edition for `year`: a placeholder is shown.
+void drawCalendarPage(const SeriesInfo &s, const CalendarMeta *meta, int year, int month, const DateYMD &today,
+                      int selDay);
+void drawCalendarImage(const SeriesInfo &s, const CalendarMeta *meta, int year, int month);
 void drawGrid(int year, int month, const DateYMD &today, int selDay);
 void drawStatus(const String &text);
 CalHit hitCalendar(int16_t x, int16_t y, int year, int month, int &day);
 
 // --- full-screen pin-up ---
-void drawFullImage(const CalendarMeta &meta, int month);
+void drawFullImage(const SeriesInfo &s, const CalendarMeta *meta, int year, int month);
 
 // --- calendar picker ---
 struct MenuState {
-  std::vector<CatalogEntry> all;
+  std::vector<SeriesEntry> all;
   std::vector<String> categories;  // "All" + unique categories
   int catIndex = 0;
   int scroll = 0;
@@ -56,7 +58,7 @@ struct MenuState {
   bool online = false;
   std::vector<int> visible() const;  // indices into `all`
 };
-enum MenuHit { MHIT_NONE, MHIT_CLOSE, MHIT_CAT, MHIT_ROW, MHIT_UP, MHIT_DOWN, MHIT_WIFI, MHIT_SYNC };
+enum MenuHit { MHIT_NONE, MHIT_CLOSE, MHIT_CAT, MHIT_ROW, MHIT_UP, MHIT_DOWN, MHIT_SYNC };
 void drawMenu(const MenuState &s);
 MenuHit hitMenu(int16_t x, int16_t y, int &row);
 

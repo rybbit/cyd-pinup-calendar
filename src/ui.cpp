@@ -10,7 +10,7 @@ using namespace Layout;
 
 namespace {
 // Old print-shop palette
-uint16_t PAPER, PAPER_DARK, INK, RED, RED_DARK, BLUE, GRIDLINE, GOLD;
+uint16_t PAPER, PAPER_DARK, INK, RED, RED_DARK, BLUE, GRIDLINE, GOLD, GREEN;
 
 const char *MONTHS[] = {"JANUARY", "FEBRUARY", "MARCH",     "APRIL",   "MAY",      "JUNE",
                         "JULY",    "AUGUST",   "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"};
@@ -68,13 +68,29 @@ bool drawJpeg(const String &path, int offsetY, int clipH) {
   return ok;
 }
 
-void drawMissingImage(int h, const String &msg) {
+// Retro sunburst with the category and year, for years with no edition.
+void drawSunburst(const SeriesInfo &s, int year, int h) {
   auto &t = UI::tft;
-  t.fillRect(0, 0, SCREEN_W, h, PAPER_DARK);
-  for (int i = -h; i < SCREEN_W; i += 16) t.drawLine(i, h, i + h, 0, PAPER);
+  t.fillRect(0, 0, SCREEN_W, h, PAPER);
+  int cx = SCREEN_W / 2, cy = h / 2;
+  const float R = 400, STEP = PI / 12;  // 24 rays
+  for (int k = 0; k < 24; k += 2) {
+    float a0 = k * STEP, a1 = a0 + STEP;
+    t.fillTriangle(cx, cy, cx + R * cos(a0), cy + R * sin(a0), cx + R * cos(a1), cy + R * sin(a1), PAPER_DARK);
+  }
+  int r = min(64, h / 2 - 14);
+  t.fillCircle(cx, cy, r, PAPER);
+  t.drawCircle(cx, cy, r, INK);
+  t.drawCircle(cx, cy, r - 1, INK);
   t.setTextDatum(MC_DATUM);
+  String cat = s.category;
+  cat.toUpperCase();
+  t.setTextColor(RED);
+  t.drawString(cat, cx, cy - 18, 2);
   t.setTextColor(INK);
-  t.drawString(msg, SCREEN_W / 2, h / 2, 2);
+  t.drawNumber(year, cx, cy + 4, 4);
+  t.setTextColor(RED_DARK);
+  t.drawString("COMING SOON", cx, cy + 26, 1);
 }
 
 void drawCaption(const String &caption, int bottom, int font) {
@@ -112,6 +128,7 @@ void begin() {
   BLUE = tft.color565(30, 80, 170);
   GRIDLINE = tft.color565(205, 190, 160);
   GOLD = tft.color565(255, 214, 90);
+  GREEN = tft.color565(60, 170, 80);
   tft.fillScreen(PAPER);
   TJpgDec.setJpgScale(1);
   TJpgDec.setSwapBytes(true);
@@ -120,11 +137,22 @@ void begin() {
 
 // ---------------------------------------------------------------- calendar page
 
-void drawCalendarImage(const CalendarMeta &meta, int month) {
-  if (!drawJpeg(Store::imagePath(meta.id, month), meta.cropY[month - 1], IMG_H))
-    drawMissingImage(IMG_H, "Image missing - open menu to re-download");
-  else
-    drawCaption(meta.captions[month - 1], IMG_H, 1);
+// The series' placeholder.jpg if it has one, otherwise a drawn sunburst.
+static void drawPlaceholder(const SeriesInfo &s, int year, int h, const String &note, int font) {
+  if (!s.hasPlaceholder || !drawJpeg(Store::placeholderPath(s.id), 0, h)) drawSunburst(s, year, h);
+  drawCaption(note, h, font);
+}
+
+static void drawArt(const SeriesInfo &s, const CalendarMeta *meta, int year, int month, int h, int font) {
+  if (meta && drawJpeg(Store::imagePath(s.id, year, month), h == SCREEN_H ? 0 : meta->cropY[month - 1], h)) {
+    drawCaption(meta->captions[month - 1], h, font);
+    return;
+  }
+  drawPlaceholder(s, year, h, meta ? String("Image missing") : String(year) + " edition not available", font);
+}
+
+void drawCalendarImage(const SeriesInfo &s, const CalendarMeta *meta, int year, int month) {
+  drawArt(s, meta, year, month, IMG_H, 1);
 }
 
 static void drawHeader(int year, int month) {
@@ -193,8 +221,9 @@ void drawStatus(const String &text) {
   tft.drawString(text, 4, STATUS_Y + STATUS_H / 2 + 1, 1);
 }
 
-void drawCalendarPage(const CalendarMeta &meta, int year, int month, const DateYMD &today, int selDay) {
-  drawCalendarImage(meta, month);
+void drawCalendarPage(const SeriesInfo &s, const CalendarMeta *meta, int year, int month, const DateYMD &today,
+                      int selDay) {
+  drawCalendarImage(s, meta, year, month);
   drawHeader(year, month);
   drawGrid(year, month, today, selDay);
 }
@@ -223,11 +252,8 @@ CalHit hitCalendar(int16_t x, int16_t y, int year, int month, int &day) {
 
 // ---------------------------------------------------------------- full screen
 
-void drawFullImage(const CalendarMeta &meta, int month) {
-  if (!drawJpeg(Store::imagePath(meta.id, month), 0, SCREEN_H))
-    drawMissingImage(SCREEN_H, "Image missing");
-  else
-    drawCaption(meta.captions[month - 1], SCREEN_H, 2);
+void drawFullImage(const SeriesInfo &s, const CalendarMeta *meta, int year, int month) {
+  drawArt(s, meta, year, month, SCREEN_H, 2);
 }
 
 // ---------------------------------------------------------------- picker
@@ -250,6 +276,8 @@ void drawMenu(const MenuState &s) {
   tft.setTextColor(PAPER);
   tft.drawString("PIN-UP CALENDARS", 8, MENU_TITLE_H / 2);
   tft.setTextFont(1);
+  // Wi-Fi status dot
+  tft.fillCircle(SCREEN_W - 40, MENU_TITLE_H / 2, 4, s.online ? GREEN : GRIDLINE);
   if (!s.currentId.isEmpty()) {  // close (X)
     int cx = SCREEN_W - 16, cy = MENU_TITLE_H / 2;
     tft.drawLine(cx - 6, cy - 6, cx + 6, cy + 6, PAPER);
@@ -270,10 +298,11 @@ void drawMenu(const MenuState &s) {
   if (vis.empty()) {
     tft.setTextColor(INK);
     tft.drawString(s.all.empty() ? "No calendars yet." : "Nothing in this category.", SCREEN_W / 2, 120, 2);
-    tft.drawString(s.online ? "Tap SYNC to fetch the list." : "Tap WI-FI to get online.", SCREEN_W / 2, 145, 2);
+    tft.drawString(s.online ? "Tap SYNC to fetch the list." : "Waiting for Wi-Fi...", SCREEN_W / 2, 145, 2);
+    if (!s.online) tft.drawString("(check /config/wifi.conf)", SCREEN_W / 2, 170, 2);
   }
   for (int r = 0; r < MENU_ROWS && s.scroll + r < (int)vis.size(); r++) {
-    const CatalogEntry &e = s.all[vis[s.scroll + r]];
+    const SeriesEntry &e = s.all[vis[s.scroll + r]];
     int y = MENU_LIST_Y + r * MENU_ROW_H;
     bool current = e.id == s.currentId;
     if (current) tft.fillRect(0, y, SCREEN_W, MENU_ROW_H, GOLD);
@@ -285,14 +314,20 @@ void drawMenu(const MenuState &s) {
     tft.drawString(title, 8, y + 3, 2);
     tft.setTextColor(RED_DARK);
     String sub = e.category;
-    if (e.year) sub += "  -  " + String(e.year);
+    String years = e.yearsLabel();
+    if (years.length()) sub += "  -  " + years;
     tft.drawString(sub, 8, y + 22, 1);
     // status badge
     tft.setTextDatum(MR_DATUM);
-    if (e.updateAvailable() && s.online) {
+    if (e.custom) {
+      tft.fillRoundRect(SCREEN_W - 30, y + MENU_ROW_H / 2 - 7, 24, 14, 3, BLUE);
+      tft.setTextDatum(MC_DATUM);
+      tft.setTextColor(PAPER);
+      tft.drawString("SD", SCREEN_W - 18, y + MENU_ROW_H / 2 + 1, 1);
+    } else if (e.updateAvailable() && s.online) {
       tft.setTextColor(RED);
       tft.drawString("UPDATE", SCREEN_W - 8, y + MENU_ROW_H / 2, 1);
-    } else if (e.downloaded) {
+    } else if (e.downloaded()) {
       tft.setTextColor(BLUE);
       tft.drawString("SAVED", SCREEN_W - 8, y + MENU_ROW_H / 2, 1);
     } else {
@@ -303,11 +338,10 @@ void drawMenu(const MenuState &s) {
 
   // buttons
   tft.fillRect(0, MENU_BTN_Y, SCREEN_W, MENU_BTN_H, PAPER_DARK);
-  int bw = SCREEN_W / 4;
+  int bw = SCREEN_W / 3;
   button(0 * bw, MENU_BTN_Y, bw, MENU_BTN_H, "UP", s.scroll > 0);
   button(1 * bw, MENU_BTN_Y, bw, MENU_BTN_H, "DOWN", s.scroll + MENU_ROWS < (int)vis.size());
-  button(2 * bw, MENU_BTN_Y, bw, MENU_BTN_H, "WI-FI");
-  button(3 * bw, MENU_BTN_Y, bw, MENU_BTN_H, "SYNC", s.online);
+  button(2 * bw, MENU_BTN_Y, bw, MENU_BTN_H, "SYNC", s.online);
 }
 
 MenuHit hitMenu(int16_t x, int16_t y, int &row) {
@@ -315,10 +349,9 @@ MenuHit hitMenu(int16_t x, int16_t y, int &row) {
   if (y < MENU_TITLE_H) return x > SCREEN_W - 50 ? MHIT_CLOSE : MHIT_NONE;
   if (y < MENU_CAT_Y + MENU_CAT_H) return MHIT_CAT;
   if (y >= MENU_BTN_Y) {
-    switch (x * 4 / SCREEN_W) {
+    switch (x * 3 / SCREEN_W) {
       case 0: return MHIT_UP;
       case 1: return MHIT_DOWN;
-      case 2: return MHIT_WIFI;
       default: return MHIT_SYNC;
     }
   }
@@ -346,7 +379,9 @@ void drawMessage(const String &title, const String &l1, const String &l2, const 
 }
 
 void drawProgress(const String &title, const String &what, int done, int total, const char *heading) {
-  if (done == 0) drawMessage(heading, title, what);
+  static String lastWhat;
+  if (done == 0 || what != lastWhat) drawMessage(heading, title, what);
+  lastWhat = what;
   int x = 20, y = 220, w = SCREEN_W - 40, h = 18;
   tft.drawRect(x, y, w, h, INK);
   int fill = total > 0 ? (w - 4) * done / total : 0;

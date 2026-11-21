@@ -22,18 +22,21 @@ bool connect(uint32_t timeoutMs) {
   return WiFi.status() == WL_CONNECTED;
 }
 
-bool reconnect(uint32_t timeoutMs) {
-  WiFi.disconnect(true);
-  delay(200);
-  return connect(timeoutMs);
+void kick() {
+  if (settings.ssid.isEmpty() || WiFi.status() == WL_CONNECTED) return;
+  WiFi.mode(WIFI_STA);
+  WiFi.setAutoReconnect(true);
+  WiFi.begin(settings.ssid.c_str(), settings.pass.c_str());
 }
+
+void startTimeSync() { configTzTime(settings.tz.c_str(), "pool.ntp.org", "time.nist.gov"); }
 
 bool online() { return WiFi.status() == WL_CONNECTED; }
 
 bool timeValid() { return time(nullptr) > 1700000000; }
 
 bool syncTime(uint32_t timeoutMs) {
-  configTzTime(settings.tz.c_str(), "pool.ntp.org", "time.nist.gov");
+  startTimeSync();
   uint32_t start = millis();
   while (!timeValid() && millis() - start < timeoutMs) delay(200);
   return timeValid();
