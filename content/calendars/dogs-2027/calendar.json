@@ -1,0 +1,56 @@
+{
+  "id": "dogs-2027",
+  "title": "Good Boys & Girls",
+  "category": "Dogs",
+  "year": 2027,
+  "months": [
+    {
+      "caption": "Miss January",
+      "crop_y": 30
+    },
+    {
+      "caption": "Miss February",
+      "crop_y": 30
+    },
+    {
+      "caption": "Miss March",
+      "crop_y": 30
+    },
+    {
+      "caption": "Miss April",
+      "crop_y": 30
+    },
+    {
+      "caption": "Miss May",
+      "crop_y": 30
+    },
+    {
+      "caption": "Miss June",
+      "crop_y": 30
+    },
+    {
+      "caption": "Miss July",
+      "crop_y": 30
+    },
+    {
+      "caption": "Miss August",
+      "crop_y": 30
+    },
+    {
+      "caption": "Miss September",
+      "crop_y": 30
+    },
+    {
+      "caption": "Miss October",
+      "crop_y": 30
+    },
+    {
+      "caption": "Miss November",
+      "crop_y": 30
+    },
+    {
+      "caption": "Miss December",
+      "crop_y": 30
+    }
+  ]
+}
