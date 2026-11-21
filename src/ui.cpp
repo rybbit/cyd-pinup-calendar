@@ -18,7 +18,8 @@ int HDR_Y = 170, HDR_H = 24;
 int DOW_Y = 194, DOW_H = 12;
 int GRID_Y = 206, ROW_H = 17;
 int STATUS_Y = 308, STATUS_H = 12;
-bool advertising = false;
+int COMPANY_CY = 0, ADDR_CY = 0, PHONE_CY = 0;  // ad line centers, relative to AD_Y
+bool mottoLine = false;
 const int CLASSIC_IMG_H = 170;  // crop_y values in calendar.json are tuned for this window
 }  // namespace
 
@@ -254,41 +255,56 @@ void drawGrid(int year, int month, const DateYMD &today, int selDay) {
   }
 }
 
-void configureLayout(bool ad) {
-  advertising = ad;
-  if (ad) {
-    IMG_H = 140;
-    AD_Y = 140, AD_H = 44;
-    HDR_Y = 184, HDR_H = 20;
-    DOW_Y = 204, DOW_H = 10;
-    GRID_Y = 214, ROW_H = 15;
-    STATUS_Y = 304, STATUS_H = 16;
-  } else {
-    IMG_H = 170;
-    AD_Y = 170, AD_H = 0;
-    HDR_Y = 170, HDR_H = 24;
-    DOW_Y = 194, DOW_H = 12;
-    GRID_Y = 206, ROW_H = 17;
-    STATUS_Y = 308, STATUS_H = 12;
+// Builds the page from whichever ad_ fields are set: each line reserves space only
+// when it has text, and the picture takes whatever height is left.
+void configureLayout() {
+  bool company = settings.adCompany.length();
+  bool addr = settings.adAddress1.length() || settings.adAddress2.length();
+  bool phone = settings.adPhone.length();
+  mottoLine = settings.adMotto.length();
+  bool any = company || addr || phone || mottoLine;
+
+  int y = 0;
+  if (company || addr || phone) {
+    y = 2;
+    if (company) { COMPANY_CY = y + 9; y += 18; }
+    if (addr) { ADDR_CY = y + 5; y += 10; }
+    if (phone) { PHONE_CY = y + 7; y += 14; }
+    y += 2;
   }
+  AD_H = y;
+  if (any) {  // shorter calendar rows to make room
+    HDR_H = 20, DOW_H = 10, ROW_H = 15;
+  } else {
+    HDR_H = 24, DOW_H = 12, ROW_H = 17;
+  }
+  STATUS_H = mottoLine ? 16 : 12;
+  IMG_H = SCREEN_H - AD_H - HDR_H - DOW_H - 6 * ROW_H - STATUS_H;
+  AD_Y = IMG_H;
+  HDR_Y = AD_Y + AD_H;
+  DOW_Y = HDR_Y + HDR_H;
+  GRID_Y = DOW_Y + DOW_H;
+  STATUS_Y = GRID_Y + 6 * ROW_H;
+  Serial.printf("Layout: picture %d px, ad block %d px, motto %s\n", IMG_H, AD_H, mottoLine ? "yes" : "no");
 }
 
-bool adMode() { return advertising; }
+bool mottoMode() { return mottoLine; }
 
 // Company name (large), the two address lines side by side (small), phone (medium).
 static void drawAd() {
   tft.fillRect(0, AD_Y, SCREEN_W, AD_H, PAPER);
   tft.drawFastHLine(0, AD_Y, SCREEN_W, GRIDLINE);
   tft.setTextColor(INK);
-  if (settings.adCompany.length()) drawFitted(settings.adCompany, SCREEN_W / 2, AD_Y + 11, &FreeSansBold9pt7b);
+  if (settings.adCompany.length())
+    drawFitted(settings.adCompany, SCREEN_W / 2, AD_Y + COMPANY_CY, &FreeSansBold9pt7b);
   String addr = settings.adAddress1;
   if (addr.length() && settings.adAddress2.length()) addr += "    ";
   addr += settings.adAddress2;
   if (addr.length()) {
     tft.setTextDatum(MC_DATUM);
-    tft.drawString(addr, SCREEN_W / 2, AD_Y + 24, 1);
+    tft.drawString(addr, SCREEN_W / 2, AD_Y + ADDR_CY, 1);
   }
-  if (settings.adPhone.length()) drawFitted(settings.adPhone, SCREEN_W / 2, AD_Y + 35, nullptr);
+  if (settings.adPhone.length()) drawFitted(settings.adPhone, SCREEN_W / 2, AD_Y + PHONE_CY, nullptr);
 }
 
 void drawMotto() {
@@ -299,7 +315,7 @@ void drawMotto() {
 }
 
 void drawStatus(const String &text) {
-  if (advertising) {
+  if (mottoLine) {
     tft.fillRect(0, STATUS_Y, SCREEN_W, STATUS_H, PAPER_DARK);
     tft.setTextColor(INK);
     drawFitted(text, SCREEN_W / 2, STATUS_Y + STATUS_H / 2 - 1, nullptr);
@@ -314,10 +330,10 @@ void drawStatus(const String &text) {
 void drawCalendarPage(const SeriesInfo &s, const CalendarMeta *meta, int year, int month, const DateYMD &today,
                       int selDay) {
   drawCalendarImage(s, meta, year, month);
-  if (advertising) drawAd();
+  if (AD_H) drawAd();
   drawHeader(year, month);
   drawGrid(year, month, today, selDay);
-  if (advertising) drawMotto();
+  if (mottoLine) drawMotto();
 }
 
 CalHit hitCalendar(int16_t x, int16_t y, int year, int month, int &day) {

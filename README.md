@@ -66,20 +66,24 @@ You need a FAT32 microSD card. Calendars are stored in `/calendar/<calendar-id>/
    **Optional advertising block,** like the dealer imprint on an old giveaway calendar:
 
    ```
-   ad_company=MODERN ENGINEERING CO.
-   ad_address1=3555 SCOTT AVENUE
-   ad_address2=ST. LOUIS, MO 63103
-   ad_phone=PHONE: JEFFERSON 3-3100
-   ad_motto=Everything For Welding
+   organization=MODERN ENGINEERING CO.
+   address1=3555 SCOTT AVENUE
+   address2=ST. LOUIS, MO 63103
+   phone=PHONE: JEFFERSON 3-3100
+   motto=Everything For Welding
    ```
 
-   If any `ad_` line is set, the calendar page switches to the advertising layout:
-   - the picture shrinks to 240x140
-   - below it: the company (large, bold), the two address lines side by side (small), and the phone (medium)
-   - the calendar rows get a little shorter
-   - the motto sits under the calendar in navy italic
+   Every line is optional and takes up space only when it's set; the picture grows to fill whatever is left. `company` works in place of `organization`, and `ad_`-prefixed names like `ad_company` work too. With none set, the page uses the classic layout.
 
-   Long company names and mottos drop to a smaller font automatically. Keep the two address lines to about 38 characters combined. With the ad block on, tapping a day shows its holidays in the motto line for a few seconds.
+   When set, the fields appear like this:
+   - organization: large, bold
+   - the two address lines: side by side, small
+   - phone: medium
+   - motto: navy italic under the calendar
+
+   The calendar rows get a little shorter to make room. Long text drops to a smaller font automatically; keep the two address lines to about 38 characters combined. With a motto, tapping a day shows its holidays in the motto line for a few seconds. Without one, the bottom line cycles the edition title and holidays as usual.
+
+   The boot log lists the values it read and flags any unrecognized key, which helps catch typos.
 
    The file is read at boot, so reset the board after editing it. If Wi-Fi is down at boot, the board retries every 2 minutes on its own. The dot in the picker's title bar is green when it's online.
 3. **Pick a calendar.** Tap the category bar to filter (All → Bikinis → Dogs → Guns → …), then tap a series. It downloads every year's edition with a progress bar, then opens to the current month.

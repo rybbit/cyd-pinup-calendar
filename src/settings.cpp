@@ -43,13 +43,19 @@ bool AppSettings::loadConfig() {
     else if (key == "pass" || key == "password" || key == "psk") pass = val;
     else if ((key == "tz" || key == "timezone") && val.length()) tz = val;
     else if ((key == "catalog" || key == "catalog_url") && val.length()) catalogUrl = val;
-    else if (key == "ad_company") adCompany = val;
-    else if (key == "ad_address1") adAddress1 = val;
-    else if (key == "ad_address2") adAddress2 = val;
-    else if (key == "ad_phone") adPhone = val;
-    else if (key == "ad_motto") adMotto = val;
+    else {
+      if (key.startsWith("ad_")) key = key.substring(3);  // ad_company and company both work
+      if (key == "organization" || key == "company") adCompany = val;
+      else if (key == "address1") adAddress1 = val;
+      else if (key == "address2") adAddress2 = val;
+      else if (key == "phone") adPhone = val;
+      else if (key == "motto") adMotto = val;
+      else Serial.printf("config.txt: unknown key \"%s\" (ignored)\n", key.c_str());
+    }
   }
   f.close();
+  Serial.printf("config.txt: organization=\"%s\" address1=\"%s\" address2=\"%s\" phone=\"%s\" motto=\"%s\"\n",
+                adCompany.c_str(), adAddress1.c_str(), adAddress2.c_str(), adPhone.c_str(), adMotto.c_str());
   Serial.printf("config.txt: ssid=\"%s\" pass=%s tz=%s\n", ssid.c_str(), pass.length() ? "(set)" : "(none)",
                 tz.c_str());
   return ssid.length() > 0;

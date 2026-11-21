@@ -107,12 +107,12 @@ void updateStatus() {
     selDay = 0;
     UI::drawGrid(viewY, viewM, today, 0);
     statusNext = 0;
-    if (UI::adMode()) {
+    if (UI::mottoMode()) {
       UI::drawMotto();
       lastStatus = "";
     }
   }
-  if (UI::adMode()) return;  // the bottom line is the motto; holidays show when a day is tapped
+  if (UI::mottoMode()) return;  // bottom line is the motto; holidays show when a day is tapped
   if (now < statusNext) return;
   statusNext = now + 3500;
   int item = statusIdx++ % (monthHolN + 1);
@@ -378,7 +378,7 @@ void setup() {
   bool haveConf = settings.loadConfig();
   setenv("TZ", settings.tz.c_str(), 1);
   tzset();
-  UI::configureLayout(settings.hasAd());
+  UI::configureLayout();
   if (haveConf) {
     UI::drawMessage("PIN-UP CALENDAR", "Connecting to Wi-Fi...", settings.ssid);
     Net::connect();

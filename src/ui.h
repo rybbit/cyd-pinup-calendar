@@ -31,9 +31,10 @@ namespace UI {
 extern TFT_eSPI tft;
 
 void begin();
-// Picks the classic or advertising layout. Call after settings.loadConfig().
-void configureLayout(bool advertising);
-bool adMode();
+// Sizes the calendar page from the ad_ fields that are set (none = classic layout).
+// Call after settings.loadConfig().
+void configureLayout();
+bool mottoMode();  // bottom line shows the motto instead of cycling holidays
 
 // --- calendar page ---
 enum CalHit { HIT_NONE, HIT_PREV, HIT_NEXT, HIT_TITLE, HIT_IMAGE, HIT_DAY, HIT_STATUS };
@@ -42,7 +43,7 @@ void drawCalendarPage(const SeriesInfo &s, const CalendarMeta *meta, int year, i
                       int selDay);
 void drawCalendarImage(const SeriesInfo &s, const CalendarMeta *meta, int year, int month);
 void drawGrid(int year, int month, const DateYMD &today, int selDay);
-void drawStatus(const String &text);  // in ad mode: temporary text in the motto line
+void drawStatus(const String &text);  // with a motto: temporary text in the motto line
 void drawMotto();
 CalHit hitCalendar(int16_t x, int16_t y, int year, int month, int &day);
 
