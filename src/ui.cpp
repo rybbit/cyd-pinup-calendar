@@ -17,9 +17,13 @@ const char *MONTHS[] = {"JANUARY", "FEBRUARY", "MARCH",     "APRIL",   "MAY",   
 const char *MON3[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
 int jpgClipBottom = SCREEN_H;
+bool jpgStoppedEarly = false;
 
 bool jpgOutput(int16_t x, int16_t y, uint16_t w, uint16_t h, uint16_t *bitmap) {
-  if (y >= jpgClipBottom) return false;  // below visible area: stop decoding
+  if (y >= jpgClipBottom) {  // below visible area: stop decoding (reported as JDR_INTR)
+    jpgStoppedEarly = true;
+    return false;
+  }
   UI::tft.pushImage(x, y, w, h, bitmap);  // clipped by the active viewport
   return true;
 }
@@ -44,7 +48,10 @@ bool drawJpeg(const String &path, int offsetY, int clipH) {
   if (got == len && buf[0] == 0xFF && buf[1] == 0xD8) {
     UI::tft.setViewport(0, 0, SCREEN_W, clipH);
     jpgClipBottom = clipH;
-    ok = TJpgDec.drawJpg(0, -offsetY, buf, len) == JDR_OK;
+    jpgStoppedEarly = false;
+    JRESULT r = TJpgDec.drawJpg(0, -offsetY, buf, len);
+    ok = r == JDR_OK || (r == JDR_INTR && jpgStoppedEarly);
+    if (!ok) Serial.printf("JPEG %s: decode error %d\n", path.c_str(), r);
     UI::tft.resetViewport();
     jpgClipBottom = SCREEN_H;
   }

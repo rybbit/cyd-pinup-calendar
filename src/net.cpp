@@ -56,7 +56,7 @@ long download(const String &url, const String &path) {
   }
   int expected = http.getSize();  // -1 when chunked
   String tmp = path + ".part";
-  SD.remove(tmp);
+  if (SD.exists(tmp)) SD.remove(tmp);
   File f = SD.open(tmp, FILE_WRITE);
   if (!f) {
     http.end();
@@ -70,7 +70,7 @@ long download(const String &url, const String &path) {
     SD.remove(tmp);
     return -1;
   }
-  SD.remove(path);
+  if (SD.exists(path)) SD.remove(path);
   if (!SD.rename(tmp, path)) return -1;
   return written;
 }
