@@ -6,51 +6,51 @@
   "months": [
     {
       "caption": "Miss January",
-      "crop_y": 30
+      "crop_y": 35
     },
     {
       "caption": "Miss February",
-      "crop_y": 30
+      "crop_y": 0
     },
     {
       "caption": "Miss March",
-      "crop_y": 30
+      "crop_y": 0
     },
     {
       "caption": "Miss April",
-      "crop_y": 30
+      "crop_y": 0
     },
     {
       "caption": "Miss May",
-      "crop_y": 30
+      "crop_y": 0
     },
     {
       "caption": "Miss June",
-      "crop_y": 30
+      "crop_y": 0
     },
     {
       "caption": "Miss July",
-      "crop_y": 30
+      "crop_y": 0
     },
     {
       "caption": "Miss August",
-      "crop_y": 30
+      "crop_y": 0
     },
     {
       "caption": "Miss September",
-      "crop_y": 30
+      "crop_y": 0
     },
     {
       "caption": "Miss October",
-      "crop_y": 30
+      "crop_y": 15
     },
     {
       "caption": "Miss November",
-      "crop_y": 30
+      "crop_y": 20
     },
     {
       "caption": "Miss December",
-      "crop_y": 30
+      "crop_y": 0
     }
   ]
 }
