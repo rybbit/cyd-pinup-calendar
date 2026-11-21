@@ -32,7 +32,7 @@
 #define CATALOG_PATH "/calendar/catalog.json"
 
 #ifndef CATALOG_URL_DEFAULT
-#define CATALOG_URL_DEFAULT "https://raw.githubusercontent.com/YOUR_GITHUB_USER/cyd-pinup-calendar/main/content/catalog.json"
+#define CATALOG_URL_DEFAULT "https://raw.githubusercontent.com/rybbit/cyd-pinup-calendar/main/content/catalog.json"
 #endif
 #ifndef TZ_DEFAULT
 #define TZ_DEFAULT "EST5EDT,M3.2.0,M11.1.0"

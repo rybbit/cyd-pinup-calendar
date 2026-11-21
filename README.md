@@ -69,8 +69,9 @@ content/calendars/<id>/calendar.json     captions + crop per month
 content/calendars/<id>/01.jpg … 12.jpg   240x320 baseline JPEG
 ```
 
-1. Push this repo to GitHub as `cyd-pinup-calendar`. Then replace `YOUR_GITHUB_USER` in `platformio.ini` (or paste the URL into the Wi-Fi portal):
-   `https://raw.githubusercontent.com/<you>/cyd-pinup-calendar/main/content/catalog.json`
+1. The firmware reads the catalog from
+   `https://raw.githubusercontent.com/rybbit/cyd-pinup-calendar/main/content/catalog.json`
+   (set in `platformio.ini`; it can also be changed in the Wi-Fi portal).
 2. Build a calendar from any 12 pictures (they're sorted by filename, January to December):
 
    ```sh
