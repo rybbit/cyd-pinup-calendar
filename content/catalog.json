@@ -7,8 +7,8 @@
       "category": "Bikinis",
       "version": "b08630df69f1",
       "years": {
-        "2027": "3ca5a8ed6e99",
-        "2028": "1e48153d5113"
+        "2027": "4b7687f6a454",
+        "2028": "24ae89ad2c45"
       }
     },
     {
@@ -17,16 +17,7 @@
       "category": "Dogs",
       "version": "6724d213ca8f",
       "years": {
-        "2027": "82aa74741417"
-      }
-    },
-    {
-      "id": "guns",
-      "title": "Gun Pin-Ups",
-      "category": "Guns",
-      "version": "16fd8959c783",
-      "years": {
-        "2027": "a777ef13c965"
+        "2027": "2ce715795e7c"
       }
     }
   ]
