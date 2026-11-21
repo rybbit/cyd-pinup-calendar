@@ -47,6 +47,13 @@ void drawStatus(const String &text);  // with a motto: temporary text in the mot
 void drawMotto();
 CalHit hitCalendar(int16_t x, int16_t y, int year, int month, int &day);
 
+// --- full-screen calendar (month grid filling the screen) ---
+// While on, drawGrid/drawStatus/hitCalendar use the big geometry. Turn off before
+// drawing the regular calendar page again.
+void setBigCalendar(bool on);
+bool bigCalendar();
+void drawBigCalendar(int year, int month, const DateYMD &today, int selDay);
+
 // --- full-screen pin-up ---
 void drawFullImage(const SeriesInfo &s, const CalendarMeta *meta, int year, int month);
 

@@ -21,6 +21,22 @@ int STATUS_Y = 308, STATUS_H = 12;
 int COMPANY_CY = 0, ADDR_CY = 0, CONTACT_CY = 0;  // ad line centers, relative to AD_Y
 bool mottoLine = false;
 const int CLASSIC_IMG_H = 170;  // crop_y values in calendar.json are tuned for this window
+
+// Full-screen calendar: the same drawing code with this geometry swapped in.
+bool bigCal = false;
+struct Geometry {
+  int imgH, adY, adH, hdrY, hdrH, dowY, dowH, gridY, rowH, statusY, statusH;
+};
+Geometry pageGeometry;
+Geometry currentGeometry() {
+  return {IMG_H, AD_Y, AD_H, HDR_Y, HDR_H, DOW_Y, DOW_H, GRID_Y, ROW_H, STATUS_Y, STATUS_H};
+}
+void applyGeometry(const Geometry &g) {
+  IMG_H = g.imgH, AD_Y = g.adY, AD_H = g.adH, HDR_Y = g.hdrY, HDR_H = g.hdrH, DOW_Y = g.dowY, DOW_H = g.dowH;
+  GRID_Y = g.gridY, ROW_H = g.rowH, STATUS_Y = g.statusY, STATUS_H = g.statusH;
+}
+//                            img ad    header  weekdays grid     status
+const Geometry BIG_CAL = {0, 0, 0, 0, 40, 40, 18, 58, 38, 286, 34};
 }  // namespace
 
 namespace {
@@ -205,9 +221,10 @@ static void drawHeader(int year, int month) {
   tft.fillRect(0, HDR_Y, SCREEN_W, HDR_H, RED);
   tft.drawFastHLine(0, HDR_Y, SCREEN_W, RED_DARK);
   int cy = HDR_Y + HDR_H / 2;
-  tft.fillTriangle(8, cy, 22, cy - 7, 22, cy + 7, PAPER);
-  tft.fillTriangle(SCREEN_W - 8, cy, SCREEN_W - 22, cy - 7, SCREEN_W - 22, cy + 7, PAPER);
-  tft.setFreeFont(&FreeSansBold9pt7b);
+  int a = bigCal ? 10 : 7;  // arrow half-height
+  tft.fillTriangle(8, cy, 8 + 2 * a, cy - a, 8 + 2 * a, cy + a, PAPER);
+  tft.fillTriangle(SCREEN_W - 8, cy, SCREEN_W - 8 - 2 * a, cy - a, SCREEN_W - 8 - 2 * a, cy + a, PAPER);
+  tft.setFreeFont(bigCal ? &FreeSansBold12pt7b : &FreeSansBold9pt7b);
   tft.setTextDatum(MC_DATUM);
   tft.setTextColor(PAPER);
   tft.drawString(String(MONTHS[month - 1]) + " " + year, SCREEN_W / 2, cy);
@@ -216,9 +233,12 @@ static void drawHeader(int year, int month) {
 
   tft.fillRect(0, DOW_Y, SCREEN_W, DOW_H, PAPER_DARK);
   static const char *DOW = "SMTWTFS";
+  static const char *DOW3[] = {"SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"};
   for (int c = 0; c < 7; c++) {
     tft.setTextColor(c == 0 ? RED : INK);
-    tft.drawString(String(DOW[c]), (colX(c) + colX(c + 1)) / 2, DOW_Y + DOW_H / 2 + 1, 1);
+    int cx = (colX(c) + colX(c + 1)) / 2;
+    if (bigCal) tft.drawString(DOW3[c], cx, DOW_Y + DOW_H / 2 + 1, 2);
+    else tft.drawString(String(DOW[c]), cx, DOW_Y + DOW_H / 2 + 1, 1);
   }
 }
 
@@ -255,15 +275,16 @@ void drawGrid(int year, int month, const DateYMD &today, int selDay) {
       tft.drawRect(x + 1, y + 1, w - 1, ROW_H - 1, INK);
       tft.drawRect(x + 2, y + 2, w - 3, ROW_H - 3, INK);
     }
-    if (observance) tft.fillCircle(x + w - 5, y + ROW_H - 5, 2, dayOff ? PAPER : BLUE);
+    if (observance) tft.fillCircle(x + w - 5, y + ROW_H - 5, bigCal ? 3 : 2, dayOff ? PAPER : BLUE);
     tft.setTextColor(fg);
-    tft.drawNumber(d, x + w / 2, y + ROW_H / 2 + 1, 2);
+    tft.drawNumber(d, x + w / 2, y + ROW_H / 2 + 1, bigCal ? 4 : 2);
   }
 }
 
 // Builds the page from whichever ad_ fields are set: each line reserves space only
 // when it has text, and the picture takes whatever height is left.
 void configureLayout() {
+  setBigCalendar(false);
   bool company = settings.showCompany.length();
   bool addr = settings.showAddress1.length() || settings.showAddress2.length();
   bool contact = settings.showContact.length();
@@ -321,7 +342,7 @@ void drawMotto() {
 }
 
 void drawStatus(const String &text) {
-  if (mottoLine) {
+  if (mottoLine || bigCal) {
     tft.fillRect(0, STATUS_Y, SCREEN_W, STATUS_H, PAPER_DARK);
     tft.setTextColor(INK);
     drawFitted(text, SCREEN_W / 2, STATUS_Y + STATUS_H / 2 - 1, nullptr);
@@ -335,6 +356,7 @@ void drawStatus(const String &text) {
 
 void drawCalendarPage(const SeriesInfo &s, const CalendarMeta *meta, int year, int month, const DateYMD &today,
                       int selDay) {
+  setBigCalendar(false);
   drawCalendarImage(s, meta, year, month);
   if (AD_H) drawAd();
   drawHeader(year, month);
@@ -363,6 +385,27 @@ CalHit hitCalendar(int16_t x, int16_t y, int year, int month, int &day) {
   }
   if (y >= STATUS_Y) return HIT_STATUS;
   return HIT_NONE;
+}
+
+// ---------------------------------------------------------------- full-screen calendar
+
+void setBigCalendar(bool on) {
+  if (on == bigCal) return;
+  if (on) {
+    pageGeometry = currentGeometry();
+    applyGeometry(BIG_CAL);
+  } else {
+    applyGeometry(pageGeometry);
+  }
+  bigCal = on;
+}
+
+bool bigCalendar() { return bigCal; }
+
+void drawBigCalendar(int year, int month, const DateYMD &today, int selDay) {
+  setBigCalendar(true);
+  drawHeader(year, month);
+  drawGrid(year, month, today, selDay);
 }
 
 // ---------------------------------------------------------------- full screen

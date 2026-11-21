@@ -1,8 +1,9 @@
 // Pin-Up Calendar for the ESP32-2432S028R "Cheap Yellow Display"
 //
-// Calendar page:  tap < / > in the red bar to change month, tap the month name for the
-//                 calendar picker, tap the picture to see it full screen, tap a day to see
-//                 its holidays, tap the bottom line to jump back to today.
+// Calendar page:  tap < / > in the red bar to change month, the month name for the big
+//                 full-screen calendar, the picture to see it full screen, a day to see its
+//                 holidays, the bottom line to jump back to today. The marketing block opens
+//                 the calendar picker when env=dev, the big calendar otherwise.
 // Boot:           hold a finger/stylus on the screen while "Hold to recalibrate" is shown
 //                 to redo touch calibration.
 //
@@ -21,7 +22,7 @@
 #include "ui.h"
 
 namespace {
-enum Screen { SCR_CAL, SCR_FULL, SCR_MENU };
+enum Screen { SCR_CAL, SCR_FULL, SCR_BIGCAL, SCR_MENU };
 Screen screen = SCR_MENU;
 
 SeriesInfo series;
@@ -89,6 +90,18 @@ void showCalendar() {
   resetStatus();
 }
 
+// The month grid filling the whole screen.
+void showBigCalendar() {
+  screen = SCR_BIGCAL;
+  UI::drawBigCalendar(viewY, viewM, today, selDay);
+  resetStatus();
+}
+
+void redraw() {
+  if (screen == SCR_BIGCAL) showBigCalendar();
+  else showCalendar();
+}
+
 void goToToday() {
   if (today.y) {
     viewY = today.y;
@@ -108,12 +121,14 @@ void updateStatus() {
     selDay = 0;
     UI::drawGrid(viewY, viewM, today, 0);
     statusNext = 0;
-    if (UI::mottoMode()) {
+    if (UI::mottoMode() && screen == SCR_CAL) {
       UI::drawMotto();
       lastStatus = "";
     }
   }
-  if (UI::mottoMode()) return;  // bottom line is the motto; holidays show when a day is tapped
+  // On the calendar page with a motto, the bottom line is the motto (holidays show
+  // when a day is tapped). The big calendar always cycles the holidays.
+  if (UI::mottoMode() && screen == SCR_CAL) return;
   if (now < statusNext) return;
   statusNext = now + 3500;
   int item = statusIdx++ % (monthHolN + 1);
@@ -140,7 +155,7 @@ void changeMonth(int delta) {
   if (viewM < 1) { viewM = 12; viewY--; }
   if (viewM > 12) { viewM = 1; viewY++; }
   selDay = 0;
-  showCalendar();
+  redraw();
 }
 
 // Selects a series that is on the SD card. keepView keeps the month being viewed.
@@ -162,6 +177,7 @@ bool loadSeries(const String &id, bool keepView = false) {
 
 void openMenu(bool reload = true) {
   screen = SCR_MENU;
+  UI::setBigCalendar(false);
   if (reload) {
     UI::drawMessage("PIN-UP CALENDARS", "Loading...");
     menu.all = Store::loadCatalog();
@@ -306,13 +322,14 @@ void handleCalendarTap(int16_t x, int16_t y) {
   switch (UI::hitCalendar(x, y, viewY, viewM, day)) {
     case UI::HIT_PREV: changeMonth(-1); break;
     case UI::HIT_NEXT: changeMonth(+1); break;
-    case UI::HIT_TITLE: openMenu(true); break;
+    case UI::HIT_TITLE: showBigCalendar(); break;
     case UI::HIT_IMAGE:
       screen = SCR_FULL;
       UI::drawFullImage(series, currentMeta(), viewY, viewM);
       break;
-    case UI::HIT_AD:  // the marketing block: a back door to the picker in dev only
+    case UI::HIT_AD:  // the marketing block: the picker in dev, the big calendar in prod
       if (settings.isDev()) openMenu(true);
+      else showBigCalendar();
       break;
     case UI::HIT_DAY: selectDay(day); break;
     case UI::HIT_STATUS:
@@ -321,6 +338,18 @@ void handleCalendarTap(int16_t x, int16_t y) {
         showCalendar();
       }
       break;
+    default: break;
+  }
+}
+
+void handleBigCalendarTap(int16_t x, int16_t y) {
+  int day;
+  switch (UI::hitCalendar(x, y, viewY, viewM, day)) {
+    case UI::HIT_PREV: changeMonth(-1); break;
+    case UI::HIT_NEXT: changeMonth(+1); break;
+    case UI::HIT_DAY: selectDay(day); break;
+    case UI::HIT_TITLE:   // month name or the bottom line: back to the calendar page
+    case UI::HIT_STATUS: showCalendar(); break;
     default: break;
   }
 }
@@ -380,7 +409,7 @@ void checkDateChange() {
     viewY = t.y;
     viewM = t.m;
   }
-  if (screen == SCR_CAL) showCalendar();
+  if (screen == SCR_CAL || screen == SCR_BIGCAL) redraw();
 }
 
 // Older firmware saved selections like "bikinis-2027"; the series is now "bikinis".
@@ -449,12 +478,13 @@ void loop() {
     switch (screen) {
       case SCR_CAL: handleCalendarTap(x, y); break;
       case SCR_FULL: showCalendar(); break;
+      case SCR_BIGCAL: handleBigCalendarTap(x, y); break;
       case SCR_MENU: handleMenuTap(x, y); break;
     }
   }
   maintainWifi();
   checkDateChange();
   checkForUpdates();
-  if (screen == SCR_CAL) updateStatus();
+  if (screen == SCR_CAL || screen == SCR_BIGCAL) updateStatus();
   delay(10);
 }
