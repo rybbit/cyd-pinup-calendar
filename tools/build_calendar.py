@@ -153,20 +153,35 @@ def ensure_series(root: Path, series_id: str, title=None, category=None, custom=
     stamp_series(root)
 
 
-def write_edition(root: Path, year: int, title: str, images, captions, focus, crops=None, fit_mode="crop"):
+def wants_frame(img: Image.Image, fit_mode: str) -> bool:
+    if fit_mode == "auto":  # portrait-ish pictures fill the screen; anything wider is framed
+        return not 0.6 <= img.width / img.height <= 0.9
+    return fit_mode == "frame"
+
+
+def write_edition(root: Path, year: int, title: str, images, captions, focus, crops=None, fit_mode="crop",
+                  first_month=1):
+    """images fill months first_month.. in order; months outside that range get no picture
+    (the CYD shows the series placeholder there)."""
     out = root / str(year)
     out.mkdir(parents=True, exist_ok=True)
     months = []
-    for i, img in enumerate(images):
-        pic = frame(img) if fit_mode == "frame" else fit(img, focus)
-        size = save_jpeg(pic, out / f"{i + 1:02d}.jpg")
-        crop = crops[i] if crops else (FRAME_CROP_Y if fit_mode == "frame" else default_crop(focus))
-        months.append({"caption": captions[i] if i < len(captions) else "", "crop_y": crop})
-        print(f"  {year}/{i + 1:02d}.jpg  {size // 1024} KB")
-    meta = {"year": year, "title": title, "months": months}
-    if fit_mode == "frame":
-        meta["fit"] = "frame"  # tells the CYD the photo is centered, not top-aligned
-    write_json(out / "calendar.json", meta)
+    for m in range(1, 13):
+        i = m - first_month
+        path = out / f"{m:02d}.jpg"
+        if not 0 <= i < len(images):
+            path.unlink(missing_ok=True)
+            months.append({"caption": "", "crop_y": 0})
+            continue
+        framed = wants_frame(images[i], fit_mode)
+        size = save_jpeg(frame(images[i]) if framed else fit(images[i], focus), path)
+        crop = crops[i] if crops else (FRAME_CROP_Y if framed else default_crop(focus))
+        entry = {"caption": captions[i] if i < len(captions) else "", "crop_y": crop}
+        if framed:
+            entry["fit"] = "frame"  # tells the CYD the photo is centered, not top-aligned
+        months.append(entry)
+        print(f"  {year}/{m:02d}.jpg  {size // 1024} KB{'  (framed)' if framed else ''}")
+    write_json(out / "calendar.json", {"year": year, "title": title, "months": months})
     stamp_edition(out)
 
 
@@ -182,7 +197,11 @@ def stamp_edition(year_dir: Path) -> str:
     path = year_dir / "calendar.json"
     meta = read_json(path)
     for i, m in enumerate(meta["months"]):
-        m["sha"] = short_hash((year_dir / f"{i + 1:02d}.jpg").read_bytes())
+        jpg = year_dir / f"{i + 1:02d}.jpg"
+        if jpg.exists():
+            m["sha"] = short_hash(jpg.read_bytes())
+        else:
+            m.pop("sha", None)
     basis = {k: meta.get(k) for k in ("year", "title", "fit", "months")}
     meta["version"] = short_hash(json.dumps(basis, sort_keys=True).encode())
     write_json(path, meta)
@@ -234,12 +253,15 @@ def restamp_all():
 
 # ---------------------------------------------------------------- CLI
 
-def load_images(args):
+def load_images(args, first_month=1):
     paths = [Path(p).expanduser() for p in args]
     if len(paths) == 1 and paths[0].is_dir():
         paths = sorted(p for p in paths[0].iterdir() if p.suffix.lower() in EXTS)
-    if len(paths) != 12:
-        sys.exit(f"need exactly 12 images, got {len(paths)}")
+    room = 13 - first_month
+    if first_month == 1 and len(paths) != 12 and len(paths) > 0 and "--partial" not in sys.argv:
+        sys.exit(f"need 12 images, got {len(paths)} (add --partial for a short year)")
+    if not 1 <= len(paths) <= room:
+        sys.exit(f"need 1-{room} images starting at month {first_month}, got {len(paths)}")
     return [Image.open(p) for p in paths]
 
 
@@ -254,8 +276,12 @@ def main():
     ap.add_argument("--images", nargs="+", help="a folder, or 12 files in Jan..Dec order")
     ap.add_argument("--captions", help="text file with up to 12 lines")
     ap.add_argument("--focus", choices=["top", "center", "bottom"], default="top")
-    ap.add_argument("--fit", choices=["crop", "frame"], default="crop",
-                    help="crop: fill the screen (portrait art); frame: whole photo on a sunburst (landscape photos)")
+    ap.add_argument("--fit", choices=["crop", "frame", "auto"], default="crop",
+                    help="crop: fill the screen (portrait art); frame: whole photo on a sunburst "
+                         "(landscape photos); auto: decide per picture")
+    ap.add_argument("--first-month", type=int, default=1, choices=range(1, 13), metavar="1-12",
+                    help="month the first image goes to (for a year that starts late)")
+    ap.add_argument("--partial", action="store_true", help="allow fewer than 12 images (year ends early)")
     ap.add_argument("--placeholder", help="image shown for years with no edition")
     ap.add_argument("--sd", help="SD card mount point: write a custom calendar there instead of content/")
     a = ap.parse_args()
@@ -281,7 +307,8 @@ def main():
         if not a.year or not a.title:
             ap.error("--images needs --year and --title")
         captions = Path(a.captions).read_text().splitlines()[:12] if a.captions else []
-        write_edition(root, a.year, a.title, load_images(a.images), captions, a.focus, fit_mode=a.fit)
+        write_edition(root, a.year, a.title, load_images(a.images, a.first_month), captions, a.focus,
+                      fit_mode=a.fit, first_month=a.first_month)
     elif not a.placeholder:
         ap.error("nothing to do: pass --images and/or --placeholder")
 

@@ -181,14 +181,14 @@ static void drawArt(const SeriesInfo &s, const CalendarMeta *meta, int year, int
   if (meta && h != SCREEN_H) {
     offset = meta->cropY[month - 1];
     // Framed photos stay centered in a shorter window; pin-up art stays top-aligned.
-    if (meta->framed) offset += (CLASSIC_IMG_H - h) / 2;
+    if (meta->framed[month - 1]) offset += (CLASSIC_IMG_H - h) / 2;
     offset = constrain(offset, 0, SCREEN_H - h);
   }
   if (meta && drawJpeg(Store::imagePath(s.id, year, month), offset, h)) {
     drawCaption(meta->captions[month - 1], h, font);
     return;
   }
-  drawPlaceholder(s, year, h, meta ? String("Image missing") : String(year) + " edition not available", font);
+  drawPlaceholder(s, year, h, meta ? String("No picture this month") : String(year) + " edition not available", font);
 }
 
 void drawCalendarImage(const SeriesInfo &s, const CalendarMeta *meta, int year, int month) {

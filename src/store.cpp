@@ -111,22 +111,18 @@ String readVersion(const String &path) {
   return readJson(path, doc) ? String(doc["version"] | "") : String();
 }
 
-bool yearDownloaded(const String &id, int year) {
-  if (!fileNonEmpty(yearDir(id, year) + "/calendar.json")) return false;
-  for (int m = 1; m <= 12; m++)
-    if (!fileNonEmpty(Store::imagePath(id, year, m))) return false;
-  return true;
-}
-
 bool loadMetaFile(const String &path, int year, CalendarMeta &meta) {
   meta = CalendarMeta();
   meta.year = year;
-  for (int i = 0; i < 12; i++) meta.cropY[i] = DEFAULT_CROP_Y;
+  for (int i = 0; i < 12; i++) {
+    meta.cropY[i] = DEFAULT_CROP_Y;
+    meta.framed[i] = false;
+  }
   JsonDocument doc;
   if (!readJson(path, doc)) return false;
   meta.title = doc["title"] | "";
   meta.version = doc["version"] | "";
-  meta.framed = String(doc["fit"] | "") == "frame";
+  bool allFramed = String(doc["fit"] | "") == "frame";  // older edition-wide setting
   int i = 0;
   for (JsonVariant mv : doc["months"].as<JsonArray>()) {
     if (i >= 12) break;
@@ -135,10 +131,27 @@ bool loadMetaFile(const String &path, int year, CalendarMeta &meta) {
     } else {
       meta.captions[i] = mv["caption"] | "";
       meta.sha[i] = mv["sha"] | "";
+      meta.framed[i] = allFramed || String(mv["fit"] | "") == "frame";
       meta.cropY[i] = constrain((int)(mv["crop_y"] | DEFAULT_CROP_Y), 0, 320 - 170);
     }
     i++;
   }
+  return true;
+}
+
+// Months an edition has a picture for. Editions with fingerprints list exactly the months
+// that have one (partial years); older editions without fingerprints have all 12.
+bool monthExpected(const CalendarMeta &meta, int m) {
+  for (int i = 0; i < 12; i++)
+    if (meta.sha[i].length()) return meta.sha[m - 1].length() > 0;
+  return true;
+}
+
+bool yearDownloaded(const String &id, int year) {
+  CalendarMeta meta;
+  if (!loadMetaFile(yearDir(id, year) + "/calendar.json", year, meta)) return false;
+  for (int m = 1; m <= 12; m++)
+    if (monthExpected(meta, m) && !fileNonEmpty(Store::imagePath(id, year, m))) return false;
   return true;
 }
 
@@ -175,7 +188,9 @@ bool downloadYear(const String &remoteSeries, const String &id, int year, Store:
   for (int m = 1; m <= 12; m++) {
     const String &now = newMeta.sha[m - 1];
     bool changed = haveOld && (now.isEmpty() ? oldMeta.version != newMeta.version : oldMeta.sha[m - 1] != now);
-    need[m - 1] = !fileNonEmpty(Store::imagePath(id, year, m)) || changed;
+    need[m - 1] = monthExpected(newMeta, m) && (!fileNonEmpty(Store::imagePath(id, year, m)) || changed);
+    if (!monthExpected(newMeta, m) && SD.exists(Store::imagePath(id, year, m)))
+      SD.remove(Store::imagePath(id, year, m));  // month dropped from the edition
     total += need[m - 1];
   }
   int done = 1;
