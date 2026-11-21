@@ -33,6 +33,7 @@ bool validId(const String &id) {
 }
 
 bool fileNonEmpty(const String &path) {
+  if (!SD.exists(path)) return false;  // SD.open on a missing file logs an error
   File f = SD.open(path);
   if (!f) return false;
   bool ok = !f.isDirectory() && f.size() > 0;
@@ -197,6 +198,7 @@ bool loadMetaFile(const String &path, const String &id, CalendarMeta &meta) {
   meta.id = id;
   for (int i = 0; i < 12; i++) meta.cropY[i] = DEFAULT_CROP_Y;
 
+  if (!SD.exists(path)) return false;
   File f = SD.open(path);
   if (!f) return false;
   JsonDocument doc;
