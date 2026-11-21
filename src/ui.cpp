@@ -277,7 +277,13 @@ void drawGrid(int year, int month, const DateYMD &today, int selDay) {
     }
     if (observance) tft.fillCircle(x + w - 5, y + ROW_H - 5, bigCal ? 3 : 2, dayOff ? PAPER : BLUE);
     tft.setTextColor(fg);
-    tft.drawNumber(d, x + w / 2, y + ROW_H / 2 + 1, bigCal ? 4 : 2);
+    if (bigCal) {  // like a printed wall calendar: small number in the top-left of a big box
+      tft.setTextDatum(TL_DATUM);
+      tft.drawNumber(d, x + 4, y + 3, 2);
+      tft.setTextDatum(MC_DATUM);
+    } else {
+      tft.drawNumber(d, x + w / 2, y + ROW_H / 2 + 1, 2);
+    }
   }
 }
 
