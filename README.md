@@ -63,6 +63,24 @@ You need a FAT32 microSD card. Calendars are stored in `/calendar/<calendar-id>/
 
    `tz` is a POSIX time zone string. The default is US Eastern (`EST5EDT,M3.2.0,M11.1.0`). Use one of:
    `CST6CDT,M3.2.0,M11.1.0` (Central), `MST7MDT,M3.2.0,M11.1.0` (Mountain), `MST7` (Arizona), `PST8PDT,M3.2.0,M11.1.0` (Pacific), `AKST9AKDT,M3.2.0,M11.1.0` (Alaska), `HST10` (Hawaii).
+   **Optional advertising block,** like the dealer imprint on an old giveaway calendar:
+
+   ```
+   ad_company=MODERN ENGINEERING CO.
+   ad_address1=3555 SCOTT AVENUE
+   ad_address2=ST. LOUIS, MO 63103
+   ad_phone=PHONE: JEFFERSON 3-3100
+   ad_motto=Everything For Welding
+   ```
+
+   If any `ad_` line is set, the calendar page switches to the advertising layout:
+   - the picture shrinks to 240x140
+   - below it: the company (large, bold), the two address lines side by side (small), and the phone (medium)
+   - the calendar rows get a little shorter
+   - the motto sits under the calendar in navy italic
+
+   Long company names and mottos drop to a smaller font automatically. Keep the two address lines to about 38 characters combined. With the ad block on, tapping a day shows its holidays in the motto line for a few seconds.
+
    The file is read at boot, so reset the board after editing it. If Wi-Fi is down at boot, the board retries every 2 minutes on its own. The dot in the picker's title bar is green when it's online.
 3. **Pick a calendar.** Tap the category bar to filter (All → Bikinis → Dogs → Guns → …), then tap a series. It downloads every year's edition with a progress bar, then opens to the current month.
 

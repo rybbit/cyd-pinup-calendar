@@ -163,7 +163,10 @@ def write_edition(root: Path, year: int, title: str, images, captions, focus, cr
         crop = crops[i] if crops else (FRAME_CROP_Y if fit_mode == "frame" else default_crop(focus))
         months.append({"caption": captions[i] if i < len(captions) else "", "crop_y": crop})
         print(f"  {year}/{i + 1:02d}.jpg  {size // 1024} KB")
-    write_json(out / "calendar.json", {"year": year, "title": title, "months": months})
+    meta = {"year": year, "title": title, "months": months}
+    if fit_mode == "frame":
+        meta["fit"] = "frame"  # tells the CYD the photo is centered, not top-aligned
+    write_json(out / "calendar.json", meta)
     stamp_edition(out)
 
 
@@ -180,7 +183,7 @@ def stamp_edition(year_dir: Path) -> str:
     meta = read_json(path)
     for i, m in enumerate(meta["months"]):
         m["sha"] = short_hash((year_dir / f"{i + 1:02d}.jpg").read_bytes())
-    basis = {k: meta.get(k) for k in ("year", "title", "months")}
+    basis = {k: meta.get(k) for k in ("year", "title", "fit", "months")}
     meta["version"] = short_hash(json.dumps(basis, sort_keys=True).encode())
     write_json(path, meta)
     return meta["version"]

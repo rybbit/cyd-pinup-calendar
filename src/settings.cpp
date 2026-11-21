@@ -21,6 +21,7 @@ bool AppSettings::loadWifiConf() {
   pass = "";
   catalogUrl = CATALOG_URL_DEFAULT;
   tz = TZ_DEFAULT;
+  adCompany = adAddress1 = adAddress2 = adPhone = adMotto = "";
   confFound = false;
 
   File f = SD.open(WIFI_CONF_PATH);
@@ -41,6 +42,11 @@ bool AppSettings::loadWifiConf() {
     else if (key == "pass" || key == "password" || key == "psk") pass = val;
     else if ((key == "tz" || key == "timezone") && val.length()) tz = val;
     else if ((key == "catalog" || key == "catalog_url") && val.length()) catalogUrl = val;
+    else if (key == "ad_company") adCompany = val;
+    else if (key == "ad_address1") adAddress1 = val;
+    else if (key == "ad_address2") adAddress2 = val;
+    else if (key == "ad_phone") adPhone = val;
+    else if (key == "ad_motto") adMotto = val;
   }
   f.close();
   Serial.printf("wifi.conf: ssid=\"%s\" pass=%s tz=%s\n", ssid.c_str(), pass.length() ? "(set)" : "(none)",

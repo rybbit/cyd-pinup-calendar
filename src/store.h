@@ -52,7 +52,8 @@ struct CalendarMeta {
   String version;
   String sha[12];  // per-image fingerprint; a changed sha means re-download that month
   String captions[12];
-  int16_t cropY[12];  // first image row shown in the 240x170 calendar view
+  int16_t cropY[12];   // first image row shown in the 240x170 calendar view
+  bool framed = false;  // built with --fit frame (photo centered on the canvas)
 };
 
 namespace Store {

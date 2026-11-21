@@ -6,11 +6,25 @@
 #include "config.h"
 #include "holidays.h"
 
+#include "settings.h"
+
 using namespace Layout;
 
 namespace {
+// Calendar page geometry; see the table in ui.h. Set by UI::configureLayout().
+int IMG_H = 170;
+int AD_Y = 170, AD_H = 0;
+int HDR_Y = 170, HDR_H = 24;
+int DOW_Y = 194, DOW_H = 12;
+int GRID_Y = 206, ROW_H = 17;
+int STATUS_Y = 308, STATUS_H = 12;
+bool advertising = false;
+const int CLASSIC_IMG_H = 170;  // crop_y values in calendar.json are tuned for this window
+}  // namespace
+
+namespace {
 // Old print-shop palette
-uint16_t PAPER, PAPER_DARK, INK, RED, RED_DARK, BLUE, GRIDLINE, GOLD, GREEN;
+uint16_t PAPER, PAPER_DARK, INK, RED, RED_DARK, BLUE, GRIDLINE, GOLD, GREEN, NAVY;
 
 const char *MONTHS[] = {"JANUARY", "FEBRUARY", "MARCH",     "APRIL",   "MAY",      "JUNE",
                         "JULY",    "AUGUST",   "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"};
@@ -105,6 +119,23 @@ void drawCaption(const String &caption, int bottom, int font) {
 
 int colX(int col) { return col * SCREEN_W / 7; }
 
+// Draws text centered at (cx, cy) in the first font that fits the width:
+// the free font, then built-in font 2, then font 1.
+void drawFitted(const String &text, int cx, int cy, const GFXfont *ff, int maxW = SCREEN_W - 8) {
+  auto &t = UI::tft;
+  t.setTextDatum(MC_DATUM);
+  if (ff) {
+    t.setFreeFont(ff);
+    if (t.textWidth(text) <= maxW) {
+      t.drawString(text, cx, cy);
+      t.setTextFont(1);
+      return;
+    }
+    t.setTextFont(1);
+  }
+  t.drawString(text, cx, cy + 1, t.textWidth(text, 2) <= maxW ? 2 : 1);
+}
+
 void button(int x, int y, int w, int h, const char *label, bool enabled = true) {
   auto &t = UI::tft;
   t.fillRoundRect(x + 3, y + 5, w - 6, h - 10, 6, enabled ? RED : PAPER_DARK);
@@ -129,6 +160,7 @@ void begin() {
   GRIDLINE = tft.color565(205, 190, 160);
   GOLD = tft.color565(255, 214, 90);
   GREEN = tft.color565(60, 170, 80);
+  NAVY = tft.color565(28, 36, 88);
   tft.fillScreen(PAPER);
   TJpgDec.setJpgScale(1);
   TJpgDec.setSwapBytes(true);
@@ -144,7 +176,14 @@ static void drawPlaceholder(const SeriesInfo &s, int year, int h, const String &
 }
 
 static void drawArt(const SeriesInfo &s, const CalendarMeta *meta, int year, int month, int h, int font) {
-  if (meta && drawJpeg(Store::imagePath(s.id, year, month), h == SCREEN_H ? 0 : meta->cropY[month - 1], h)) {
+  int offset = 0;
+  if (meta && h != SCREEN_H) {
+    offset = meta->cropY[month - 1];
+    // Framed photos stay centered in a shorter window; pin-up art stays top-aligned.
+    if (meta->framed) offset += (CLASSIC_IMG_H - h) / 2;
+    offset = constrain(offset, 0, SCREEN_H - h);
+  }
+  if (meta && drawJpeg(Store::imagePath(s.id, year, month), offset, h)) {
     drawCaption(meta->captions[month - 1], h, font);
     return;
   }
@@ -166,6 +205,7 @@ static void drawHeader(int year, int month) {
   tft.setTextColor(PAPER);
   tft.drawString(String(MONTHS[month - 1]) + " " + year, SCREEN_W / 2, cy);
   tft.setTextFont(1);
+  tft.setTextDatum(MC_DATUM);
 
   tft.fillRect(0, DOW_Y, SCREEN_W, DOW_H, PAPER_DARK);
   static const char *DOW = "SMTWTFS";
@@ -214,7 +254,57 @@ void drawGrid(int year, int month, const DateYMD &today, int selDay) {
   }
 }
 
+void configureLayout(bool ad) {
+  advertising = ad;
+  if (ad) {
+    IMG_H = 140;
+    AD_Y = 140, AD_H = 44;
+    HDR_Y = 184, HDR_H = 20;
+    DOW_Y = 204, DOW_H = 10;
+    GRID_Y = 214, ROW_H = 15;
+    STATUS_Y = 304, STATUS_H = 16;
+  } else {
+    IMG_H = 170;
+    AD_Y = 170, AD_H = 0;
+    HDR_Y = 170, HDR_H = 24;
+    DOW_Y = 194, DOW_H = 12;
+    GRID_Y = 206, ROW_H = 17;
+    STATUS_Y = 308, STATUS_H = 12;
+  }
+}
+
+bool adMode() { return advertising; }
+
+// Company name (large), the two address lines side by side (small), phone (medium).
+static void drawAd() {
+  tft.fillRect(0, AD_Y, SCREEN_W, AD_H, PAPER);
+  tft.drawFastHLine(0, AD_Y, SCREEN_W, GRIDLINE);
+  tft.setTextColor(INK);
+  if (settings.adCompany.length()) drawFitted(settings.adCompany, SCREEN_W / 2, AD_Y + 11, &FreeSansBold9pt7b);
+  String addr = settings.adAddress1;
+  if (addr.length() && settings.adAddress2.length()) addr += "    ";
+  addr += settings.adAddress2;
+  if (addr.length()) {
+    tft.setTextDatum(MC_DATUM);
+    tft.drawString(addr, SCREEN_W / 2, AD_Y + 24, 1);
+  }
+  if (settings.adPhone.length()) drawFitted(settings.adPhone, SCREEN_W / 2, AD_Y + 35, nullptr);
+}
+
+void drawMotto() {
+  tft.fillRect(0, STATUS_Y, SCREEN_W, STATUS_H, PAPER);
+  if (settings.adMotto.isEmpty()) return;
+  tft.setTextColor(NAVY);
+  drawFitted(settings.adMotto, SCREEN_W / 2, STATUS_Y + STATUS_H / 2 - 1, &FreeSerifBoldItalic9pt7b);
+}
+
 void drawStatus(const String &text) {
+  if (advertising) {
+    tft.fillRect(0, STATUS_Y, SCREEN_W, STATUS_H, PAPER_DARK);
+    tft.setTextColor(INK);
+    drawFitted(text, SCREEN_W / 2, STATUS_Y + STATUS_H / 2 - 1, nullptr);
+    return;
+  }
   tft.fillRect(0, STATUS_Y, SCREEN_W, STATUS_H, PAPER_DARK);
   tft.setTextDatum(ML_DATUM);
   tft.setTextColor(INK);
@@ -224,13 +314,15 @@ void drawStatus(const String &text) {
 void drawCalendarPage(const SeriesInfo &s, const CalendarMeta *meta, int year, int month, const DateYMD &today,
                       int selDay) {
   drawCalendarImage(s, meta, year, month);
+  if (advertising) drawAd();
   drawHeader(year, month);
   drawGrid(year, month, today, selDay);
+  if (advertising) drawMotto();
 }
 
 CalHit hitCalendar(int16_t x, int16_t y, int year, int month, int &day) {
   day = 0;
-  if (y < IMG_H) return HIT_IMAGE;
+  if (y < IMG_H + AD_H) return HIT_IMAGE;  // the ad block opens the picture too
   if (y < HDR_Y + HDR_H + 4) {  // header (a little extra slop below it)
     if (x < 60) return HIT_PREV;
     if (x > SCREEN_W - 60) return HIT_NEXT;

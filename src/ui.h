@@ -6,19 +6,16 @@
 
 #include "store.h"
 
-// Screen layout (portrait 240x320)
-//   0..169    pin-up image (cropped from a 240x320 picture)
-//   170..193  red header:  <  NOVEMBER 2026  >
-//   194..205  weekday initials
-//   206..307  6 week rows x 17px
-//   308..319  status line (holiday names)
+// Calendar page layout (portrait 240x320), chosen at boot by UI::configureLayout():
+//
+//   classic (no ad_ fields)            advertising (ad_ fields in wifi.conf)
+//   0..169    picture                  0..139    picture
+//                                      140..183  company / addresses / phone
+//   170..193  red header < MONTH >     184..203  red header
+//   194..205  weekday initials         204..213  weekday initials
+//   206..307  6 rows x 17px            214..303  6 rows x 15px
+//   308..319  status line              304..319  motto (holidays when a day is tapped)
 namespace Layout {
-const int IMG_H = 170;
-const int HDR_Y = 170, HDR_H = 24;
-const int DOW_Y = 194, DOW_H = 12;
-const int GRID_Y = 206, ROW_H = 17;
-const int STATUS_Y = 308, STATUS_H = 12;
-
 // menu
 const int MENU_TITLE_H = 28;
 const int MENU_CAT_Y = 28, MENU_CAT_H = 26;
@@ -34,6 +31,9 @@ namespace UI {
 extern TFT_eSPI tft;
 
 void begin();
+// Picks the classic or advertising layout. Call after settings.loadWifiConf().
+void configureLayout(bool advertising);
+bool adMode();
 
 // --- calendar page ---
 enum CalHit { HIT_NONE, HIT_PREV, HIT_NEXT, HIT_TITLE, HIT_IMAGE, HIT_DAY, HIT_STATUS };
@@ -42,7 +42,8 @@ void drawCalendarPage(const SeriesInfo &s, const CalendarMeta *meta, int year, i
                       int selDay);
 void drawCalendarImage(const SeriesInfo &s, const CalendarMeta *meta, int year, int month);
 void drawGrid(int year, int month, const DateYMD &today, int selDay);
-void drawStatus(const String &text);
+void drawStatus(const String &text);  // in ad mode: temporary text in the motto line
+void drawMotto();
 CalHit hitCalendar(int16_t x, int16_t y, int year, int month, int &day);
 
 // --- full-screen pin-up ---

@@ -126,6 +126,7 @@ bool loadMetaFile(const String &path, int year, CalendarMeta &meta) {
   if (!readJson(path, doc)) return false;
   meta.title = doc["title"] | "";
   meta.version = doc["version"] | "";
+  meta.framed = String(doc["fit"] | "") == "frame";
   int i = 0;
   for (JsonVariant mv : doc["months"].as<JsonArray>()) {
     if (i >= 12) break;
