@@ -43,5 +43,5 @@
 #define TZ_DEFAULT "EST5EDT,M3.2.0,M11.1.0"
 #endif
 
-#define WIFI_CONF_PATH "/config/wifi.conf"
+#define CONFIG_PATH "/calendar/config.txt"
 #define MAX_IMAGE_BYTES (120 * 1024)

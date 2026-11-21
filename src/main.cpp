@@ -251,7 +251,7 @@ void handleMenuTap(int16_t x, int16_t y) {
       if (Net::online()) {
         UI::drawMessage("SYNC", "Fetching calendar list...");
         if (!Store::refreshCatalog()) {
-          UI::drawMessage("SYNC FAILED", "Could not download", "catalog.json", "Check catalog= in wifi.conf");
+          UI::drawMessage("SYNC FAILED", "Could not download", "catalog.json", "Check catalog= in config.txt");
           delay(2500);
         } else {
           updateSelectedSeries();
@@ -375,7 +375,7 @@ void setup() {
   }
   Store::cleanupLegacy();
 
-  bool haveConf = settings.loadWifiConf();
+  bool haveConf = settings.loadConfig();
   setenv("TZ", settings.tz.c_str(), 1);
   tzset();
   UI::configureLayout(settings.hasAd());
@@ -383,7 +383,7 @@ void setup() {
     UI::drawMessage("PIN-UP CALENDAR", "Connecting to Wi-Fi...", settings.ssid);
     Net::connect();
   } else {
-    UI::drawMessage("NO WI-FI CONFIG", "Create " WIFI_CONF_PATH, "on the SD card with lines", "ssid=...  and  pass=...");
+    UI::drawMessage("NO WI-FI CONFIG", "Create " CONFIG_PATH, "on the SD card with lines", "ssid=...  and  pass=...");
     delay(4000);
   }
   if (Net::online()) {

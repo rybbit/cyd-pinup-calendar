@@ -51,7 +51,7 @@ You need a FAT32 microSD card. Calendars are stored in `/calendar/<calendar-id>/
 ## First boot
 
 1. **Touch calibration.** Tap the three crosshairs with the stylus. To redo it later, hold the screen while "Hold screen to recalibrate" is shown at power-up.
-2. **Wi-Fi.** Create `/config/wifi.conf` on the SD card:
+2. **Wi-Fi.** Create `/calendar/config.txt` on the SD card:
 
    ```
    ssid=MyNetwork
@@ -98,7 +98,7 @@ content/calendars/<series>/<year>/calendar.json   edition title, captions, crop 
 content/calendars/<series>/<year>/01.jpg … 12.jpg 240x320 baseline JPEG
 ```
 
-The board mirrors this on the SD card under `/calendar/<series>/`. The firmware reads the catalog from `https://raw.githubusercontent.com/rybbit/cyd-pinup-calendar/main/content/catalog.json` (set in `platformio.ini`; override with `catalog=` in `wifi.conf`).
+The board mirrors this on the SD card under `/calendar/<series>/`. The firmware reads the catalog from `https://raw.githubusercontent.com/rybbit/cyd-pinup-calendar/main/content/catalog.json` (set in `platformio.ini`; override with `catalog=` in `config.txt`).
 
 **Add a year's edition.** Use any 12 pictures; they're sorted by filename, January to December:
 
@@ -168,7 +168,7 @@ g++ -std=c++11 -I src test/host/test_holidays.cpp src/holidays.cpp -o /tmp/th &&
 | `src/ui.cpp` | drawing: calendar page, full-screen picture, picker, progress |
 | `src/store.cpp` | series/edition catalog, SD layout, custom calendars, incremental downloads |
 | `src/net.cpp` | Wi-Fi, NTP, HTTPS → SD download |
-| `src/settings.cpp` | `/config/wifi.conf` parser + selected calendar (NVS) |
+| `src/settings.cpp` | `/calendar/config.txt` parser + selected calendar (NVS) |
 | `src/touch.cpp` | bit-banged XPT2046 + 3-point calibration (saved in NVS) |
 | `src/holidays.cpp` | US holiday engine (pure C++) |
 | `tools/` | image/catalog builders |

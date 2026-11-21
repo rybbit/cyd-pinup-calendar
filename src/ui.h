@@ -8,7 +8,7 @@
 
 // Calendar page layout (portrait 240x320), chosen at boot by UI::configureLayout():
 //
-//   classic (no ad_ fields)            advertising (ad_ fields in wifi.conf)
+//   classic (no ad_ fields)            advertising (ad_ fields in config.txt)
 //   0..169    picture                  0..139    picture
 //                                      140..183  company / addresses / phone
 //   170..193  red header < MONTH >     184..203  red header
@@ -31,7 +31,7 @@ namespace UI {
 extern TFT_eSPI tft;
 
 void begin();
-// Picks the classic or advertising layout. Call after settings.loadWifiConf().
+// Picks the classic or advertising layout. Call after settings.loadConfig().
 void configureLayout(bool advertising);
 bool adMode();
 

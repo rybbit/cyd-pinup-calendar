@@ -391,7 +391,7 @@ void drawMenu(const MenuState &s) {
     tft.setTextColor(INK);
     tft.drawString(s.all.empty() ? "No calendars yet." : "Nothing in this category.", SCREEN_W / 2, 120, 2);
     tft.drawString(s.online ? "Tap SYNC to fetch the list." : "Waiting for Wi-Fi...", SCREEN_W / 2, 145, 2);
-    if (!s.online) tft.drawString("(check /config/wifi.conf)", SCREEN_W / 2, 170, 2);
+    if (!s.online) tft.drawString("(check /calendar/config.txt)", SCREEN_W / 2, 170, 2);
   }
   for (int r = 0; r < MENU_ROWS && s.scroll + r < (int)vis.size(); r++) {
     const SeriesEntry &e = s.all[vis[s.scroll + r]];

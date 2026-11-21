@@ -16,7 +16,7 @@ void AppSettings::load() {
   tz = TZ_DEFAULT;
 }
 
-bool AppSettings::loadWifiConf() {
+bool AppSettings::loadConfig() {
   ssid = "";
   pass = "";
   catalogUrl = CATALOG_URL_DEFAULT;
@@ -24,7 +24,8 @@ bool AppSettings::loadWifiConf() {
   adCompany = adAddress1 = adAddress2 = adPhone = adMotto = "";
   confFound = false;
 
-  File f = SD.open(WIFI_CONF_PATH);
+  if (!SD.exists(CONFIG_PATH)) return false;
+  File f = SD.open(CONFIG_PATH);
   if (!f) return false;
   confFound = true;
   while (f.available()) {
@@ -49,7 +50,7 @@ bool AppSettings::loadWifiConf() {
     else if (key == "ad_motto") adMotto = val;
   }
   f.close();
-  Serial.printf("wifi.conf: ssid=\"%s\" pass=%s tz=%s\n", ssid.c_str(), pass.length() ? "(set)" : "(none)",
+  Serial.printf("config.txt: ssid=\"%s\" pass=%s tz=%s\n", ssid.c_str(), pass.length() ? "(set)" : "(none)",
                 tz.c_str());
   return ssid.length() > 0;
 }
