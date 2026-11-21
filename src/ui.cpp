@@ -35,8 +35,9 @@ void applyGeometry(const Geometry &g) {
   IMG_H = g.imgH, AD_Y = g.adY, AD_H = g.adH, HDR_Y = g.hdrY, HDR_H = g.hdrH, DOW_Y = g.dowY, DOW_H = g.dowH;
   GRID_Y = g.gridY, ROW_H = g.rowH, STATUS_Y = g.statusY, STATUS_H = g.statusH;
 }
+// The header is the regular page's (same font and arrows); the extra room goes to the rows.
 //                            img ad    header  weekdays grid     status
-const Geometry BIG_CAL = {0, 0, 0, 0, 40, 40, 18, 58, 38, 286, 34};
+const Geometry BIG_CAL = {0, 0, 0, 0, 24, 24, 18, 42, 40, 282, 38};
 }  // namespace
 
 namespace {
@@ -221,10 +222,9 @@ static void drawHeader(int year, int month) {
   tft.fillRect(0, HDR_Y, SCREEN_W, HDR_H, RED);
   tft.drawFastHLine(0, HDR_Y, SCREEN_W, RED_DARK);
   int cy = HDR_Y + HDR_H / 2;
-  int a = bigCal ? 10 : 7;  // arrow half-height
-  tft.fillTriangle(8, cy, 8 + 2 * a, cy - a, 8 + 2 * a, cy + a, PAPER);
-  tft.fillTriangle(SCREEN_W - 8, cy, SCREEN_W - 8 - 2 * a, cy - a, SCREEN_W - 8 - 2 * a, cy + a, PAPER);
-  tft.setFreeFont(bigCal ? &FreeSansBold12pt7b : &FreeSansBold9pt7b);
+  tft.fillTriangle(8, cy, 22, cy - 7, 22, cy + 7, PAPER);
+  tft.fillTriangle(SCREEN_W - 8, cy, SCREEN_W - 22, cy - 7, SCREEN_W - 22, cy + 7, PAPER);
+  tft.setFreeFont(&FreeSansBold9pt7b);
   tft.setTextDatum(MC_DATUM);
   tft.setTextColor(PAPER);
   tft.drawString(String(MONTHS[month - 1]) + " " + year, SCREEN_W / 2, cy);
