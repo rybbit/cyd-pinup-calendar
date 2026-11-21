@@ -15,17 +15,20 @@
 //                                               may be a phone, email, website...)
 //         motto=Everything For Welding
 //         env=dev                               (optional: dev or prod, default prod)
+//         theme=blue                            (optional: red, blue or green, default red)
 //     Blank lines and lines starting with # are ignored.
 //   * NVS (flash): the currently selected calendar.
 //
-// env=dev: tapping the advertising block opens the calendar picker, and an empty block
-// (no organization, addresses or contact) shows the project's details instead.
+// env=dev: a long press on the month name or advertising block opens the calendar
+// picker, and an empty block (no organization, addresses or contact) shows the project's
+// details instead. env=prod: no way into the picker or SETUP.
 struct AppSettings {
   String calId;       // currently selected calendar id (NVS)
   String ssid, pass;  // from config.txt
   String catalogUrl;  // from config.txt or CATALOG_URL_DEFAULT
   String tz;          // POSIX TZ string, from config.txt or TZ_DEFAULT
   String env;         // "dev" or "prod" ("" = prod)
+  String theme;       // "red" (default), "blue" or "green"
   bool confFound = false;
   // Raw values from config.txt (what the SETUP screen edits)
   String adCompany, adAddress1, adAddress2, adContact, adMotto;

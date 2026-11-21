@@ -99,12 +99,15 @@ You need a FAT32 microSD card. Calendars are stored in `/calendar/<calendar-id>/
 
    With `env=dev`, if organization, address1, address2 and contact are all blank, the block shows the project name `cyd-pinup-calendar` (in the large organization font) and the developer contact instead. These are set by `DEV_ORGANIZATION` / `DEV_CONTACT` in `platformio.ini`. With `env=prod`, an all-blank block takes no space.
 
+   **`theme`** (optional, `red`, `blue` or `green`; default red) colors the month bar, Sunday numbers, holiday fills and buttons. Observance dots use a contrasting color: blue in the Red and Green themes, red in the Blue theme.
+
    **Big calendar.** Tapping the month name shows the month filling the whole screen, with large numbers and the holidays cycling along the bottom. ◀ ▶ change month and tapping a day shows its holidays. Tap the month name or the bottom line to go back.
 
    **Editing on the device** (env=dev). Open the picker (long-press the month name or the advertising block) and tap **SETUP**. Every value is listed; tap one to change it:
    - **Wi-Fi:** scans nearby networks, then asks for the password. **TYPE NAME** handles hidden networks.
    - **Time zone:** pick a US zone, or **CUSTOM** for a POSIX string.
    - **Env:** choose dev or prod.
+   - **Theme:** choose Red, Blue or Green.
    - **Everything else:** an on-screen keyboard (ABC for capitals, #+= for symbols).
 
    **SAVE** rewrites `config.txt` in place, keeping your key spellings, comments and unknown lines, and applies the changes immediately: Wi-Fi reconnects, the clock's time zone updates, and the advertising layout redraws.

@@ -31,6 +31,12 @@ namespace UI {
 extern TFT_eSPI tft;
 
 void begin();
+// Color theme: "red" (default), "blue" or "green".
+void applyTheme(const String &name);
+uint16_t accentColor();
+uint16_t accentDarkColor();
+// Bold title text vertically centered on its capital letters at cy.
+void drawTitle(const String &text, int x, int cy, bool centered);
 // Sizes the calendar page from the ad_ fields that are set (none = classic layout).
 // Call after settings.loadConfig().
 void configureLayout();

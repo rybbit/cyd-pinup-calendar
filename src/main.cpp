@@ -256,6 +256,7 @@ void openSetup() {
     setenv("TZ", settings.tz.c_str(), 1);
     tzset();
     UI::configureLayout();
+    UI::applyTheme(settings.theme);
     today = getToday();
     bool wifiChanged = settings.ssid != oldSsid || settings.pass != oldPass;
     if (wifiChanged && settings.ssid.length()) {
@@ -469,6 +470,7 @@ void setup() {
   setenv("TZ", settings.tz.c_str(), 1);
   tzset();
   UI::configureLayout();
+  UI::applyTheme(settings.theme);
   if (haveConf) {
     UI::drawMessage("PIN-UP CALENDAR", "Connecting to Wi-Fi...", settings.ssid);
     Net::connect();

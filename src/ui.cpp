@@ -42,7 +42,12 @@ const Geometry BIG_CAL = {0, 0, 0, 0, 24, 24, 18, 42, 40, 282, 38};
 
 namespace {
 // Old print-shop palette
-uint16_t PAPER, PAPER_DARK, INK, RED, RED_DARK, BLUE, GRIDLINE, GOLD, GREEN, NAVY;
+uint16_t PAPER, PAPER_DARK, INK, GRIDLINE, GOLD, GREEN, NAVY;
+// Theme colors (UI::applyTheme). The names come from the original Red theme:
+//   RED      accent: month bar, Sundays, federal holidays, buttons
+//   RED_DARK darker accent: bar edge, secondary text
+//   BLUE     contrast: observance dots and labels, SD badge
+uint16_t RED, RED_DARK, BLUE;
 
 const char *MONTHS[] = {"JANUARY", "FEBRUARY", "MARCH",     "APRIL",   "MAY",      "JUNE",
                         "JULY",    "AUGUST",   "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"};
@@ -191,15 +196,44 @@ void button(int x, int y, int w, int h, const char *label, bool enabled = true) 
 namespace UI {
 TFT_eSPI tft;
 
+void applyTheme(const String &name) {
+  String t = name;
+  t.toLowerCase();
+  if (t == "blue") {
+    RED = tft.color565(44, 92, 186);
+    RED_DARK = tft.color565(24, 56, 128);
+    BLUE = tft.color565(196, 32, 38);
+  } else if (t == "green") {
+    RED = tft.color565(36, 122, 64);
+    RED_DARK = tft.color565(20, 80, 40);
+    BLUE = tft.color565(30, 80, 170);
+  } else {  // red (default)
+    RED = tft.color565(196, 32, 38);
+    RED_DARK = tft.color565(140, 20, 24);
+    BLUE = tft.color565(30, 80, 170);
+  }
+}
+
+uint16_t accentColor() { return RED; }
+uint16_t accentDarkColor() { return RED_DARK; }
+
+// Bold title text centered on its capital letters: the font's normal centering also
+// reserves room for descenders, which made all-caps titles sit low in their bars.
+void drawTitle(const String &text, int x, int cy, bool centered) {
+  tft.setFreeFont(&FreeSansBold9pt7b);
+  tft.setTextDatum(centered ? C_BASELINE : L_BASELINE);
+  tft.drawString(text, x, cy + 6);  // caps are 13px tall, 12px above the baseline
+  tft.setTextFont(1);
+  tft.setTextDatum(MC_DATUM);
+}
+
 void begin() {
   tft.init();
   tft.setRotation(DISPLAY_ROTATION);
   PAPER = tft.color565(250, 243, 224);
   PAPER_DARK = tft.color565(232, 220, 190);
   INK = tft.color565(35, 30, 28);
-  RED = tft.color565(196, 32, 38);
-  RED_DARK = tft.color565(140, 20, 24);
-  BLUE = tft.color565(30, 80, 170);
+  applyTheme("red");
   GRIDLINE = tft.color565(205, 190, 160);
   GOLD = tft.color565(255, 214, 90);
   GREEN = tft.color565(60, 170, 80);
@@ -248,12 +282,8 @@ static void drawHeader(int year, int month) {
   int cy = HDR_Y + HDR_H / 2;
   tft.fillTriangle(8, cy, 22, cy - 7, 22, cy + 7, PAPER);
   tft.fillTriangle(SCREEN_W - 8, cy, SCREEN_W - 22, cy - 7, SCREEN_W - 22, cy + 7, PAPER);
-  tft.setFreeFont(&FreeSansBold9pt7b);
-  tft.setTextDatum(MC_DATUM);
   tft.setTextColor(PAPER);
-  tft.drawString(String(MONTHS[month - 1]) + " " + year, SCREEN_W / 2, cy);
-  tft.setTextFont(1);
-  tft.setTextDatum(MC_DATUM);
+  drawTitle(String(MONTHS[month - 1]) + " " + year, SCREEN_W / 2, cy, true);
 
   tft.fillRect(0, DOW_Y, SCREEN_W, DOW_H, PAPER_DARK);
   static const char *DOW = "SMTWTFS";
@@ -473,11 +503,8 @@ void drawMenu(const MenuState &s) {
 
   // title bar
   tft.fillRect(0, 0, SCREEN_W, MENU_TITLE_H, RED);
-  tft.setFreeFont(&FreeSansBold9pt7b);
-  tft.setTextDatum(ML_DATUM);
   tft.setTextColor(PAPER);
-  tft.drawString("PIN-UP CALENDARS", 8, MENU_TITLE_H / 2);
-  tft.setTextFont(1);
+  drawTitle("PIN-UP CALENDARS", 8, MENU_TITLE_H / 2, false);
   // Wi-Fi status dot
   tft.fillCircle(SCREEN_W - 40, MENU_TITLE_H / 2, 4, s.online ? GREEN : GRIDLINE);
   if (!s.currentId.isEmpty()) {  // close (X)
@@ -571,11 +598,8 @@ MenuHit hitMenu(int16_t x, int16_t y, int &row) {
 void drawMessage(const String &title, const String &l1, const String &l2, const String &l3) {
   tft.fillScreen(PAPER);
   tft.fillRect(0, 0, SCREEN_W, 40, RED);
-  tft.setFreeFont(&FreeSansBold9pt7b);
-  tft.setTextDatum(MC_DATUM);
   tft.setTextColor(PAPER);
-  tft.drawString(title, SCREEN_W / 2, 20);
-  tft.setTextFont(1);
+  drawTitle(title, SCREEN_W / 2, 20, true);
   tft.setTextColor(INK);
   const String *lines[] = {&l1, &l2, &l3};
   for (int i = 0; i < 3; i++)

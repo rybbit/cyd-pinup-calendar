@@ -18,8 +18,8 @@ void initColors() {
   PAPER = tft.color565(250, 243, 224);
   PAPER_DARK = tft.color565(232, 220, 190);
   INK = tft.color565(35, 30, 28);
-  RED = tft.color565(196, 32, 38);
-  RED_DARK = tft.color565(140, 20, 24);
+  RED = UI::accentColor();  // current theme
+  RED_DARK = UI::accentDarkColor();
   GRID = tft.color565(205, 190, 160);
   GOLD = tft.color565(255, 214, 90);
   MUTED = tft.color565(150, 135, 110);
@@ -31,11 +31,8 @@ void waitTap(int16_t &x, int16_t &y) {
 
 void titleBar(const String &title) {
   tft.fillRect(0, 0, SCREEN_W, 28, RED);
-  tft.setFreeFont(&FreeSansBold9pt7b);
-  tft.setTextDatum(ML_DATUM);
   tft.setTextColor(PAPER);
-  tft.drawString(title, 8, 14);
-  tft.setTextFont(1);
+  UI::drawTitle(title, 8, 14, false);
 }
 
 void button(int x, int y, int w, int h, const char *label, uint16_t color) {
@@ -236,6 +233,15 @@ void editZone(AppSettings &e) {
   }
 }
 
+void editTheme(AppSettings &e) {
+  static const char *const THEMES[] = {"red", "blue", "green"};
+  int cur = 0;
+  for (int i = 0; i < 3; i++)
+    if (e.theme.equalsIgnoreCase(THEMES[i])) cur = i;
+  int r = choose("COLOR THEME", {"Red", "Blue", "Green"}, cur);
+  if (r >= 0) e.theme = THEMES[r];
+}
+
 void editEnv(AppSettings &e) {
   int r = choose("ENVIRONMENT", {"prod  (ad block does nothing)", "dev  (ad block opens picker)"}, e.isDev() ? 1 : 0);
   if (r == 0) e.env = "prod";
@@ -295,7 +301,7 @@ void editWifi(AppSettings &e) {
 
 // ---------------------------------------------------------------- settings list
 
-enum Kind { TEXT, SECRET, WIFI, ZONE, ENV };
+enum Kind { TEXT, SECRET, WIFI, ZONE, ENV, THEME };
 struct Field {
   const char *label;
   String AppSettings::*member;
@@ -311,10 +317,11 @@ const Field FIELDS[] = {
     {"Contact", &AppSettings::adContact, TEXT},
     {"Motto", &AppSettings::adMotto, TEXT},
     {"Env", &AppSettings::env, ENV},
+    {"Theme", &AppSettings::theme, THEME},
     {"Catalog URL", &AppSettings::catalogUrl, TEXT},
 };
 const int NFIELDS = sizeof(FIELDS) / sizeof(FIELDS[0]);
-const int LIST_Y = 30, LIST_ROW = 25, SAVE_Y = LIST_Y + NFIELDS * LIST_ROW + 4;
+const int LIST_Y = 30, LIST_ROW = 23, SAVE_Y = LIST_Y + NFIELDS * LIST_ROW + 4;
 
 String shownValue(const AppSettings &e, const Field &f) {
   const String &v = e.*(f.member);
@@ -322,6 +329,12 @@ String shownValue(const AppSettings &e, const Field &f) {
     case SECRET: return v.isEmpty() ? "" : String("********");
     case ZONE: return zoneName(v);
     case ENV: return v.isEmpty() ? "prod (default)" : v;
+    case THEME: {
+      String t = v.isEmpty() ? String("red") : v;
+      t.toLowerCase();
+      t.setCharAt(0, toupper(t[0]));
+      return t;
+    }
     default: return v;
   }
 }
@@ -379,6 +392,7 @@ bool run() {
       case WIFI: editWifi(e); break;
       case ZONE: editZone(e); break;
       case ENV: editEnv(e); break;
+      case THEME: editTheme(e); break;
       default: {
         String v = e.*(f.member);
         if (editText(f.label, v, f.kind == SECRET ? 64 : 120)) e.*(f.member) = v;
