@@ -20,6 +20,15 @@ int jpgClipBottom = SCREEN_H;
 bool jpgStoppedEarly = false;
 
 bool jpgOutput(int16_t x, int16_t y, uint16_t w, uint16_t h, uint16_t *bitmap) {
+#if JPEG_SWAP_RB
+  // This panel shows decoded JPEG pixels with red and blue exchanged (UI colors are fine),
+  // so swap them back. Pixels are byte-swapped for SPI (TJpgDec.setSwapBytes(true)).
+  for (uint32_t i = 0, n = (uint32_t)w * h; i < n; i++) {
+    uint16_t p = (bitmap[i] >> 8) | (bitmap[i] << 8);
+    p = (p & 0x07E0) | (p >> 11) | ((p & 0x001F) << 11);
+    bitmap[i] = (p >> 8) | (p << 8);
+  }
+#endif
   if (y >= jpgClipBottom) {  // below visible area: stop decoding (reported as JDR_INTR)
     jpgStoppedEarly = true;
     return false;

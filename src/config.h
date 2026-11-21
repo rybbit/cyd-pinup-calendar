@@ -24,6 +24,11 @@
 #define DISPLAY_ROTATION 0
 #endif
 
+// Exchange red/blue in decoded pictures (set per board in platformio.ini).
+#ifndef JPEG_SWAP_RB
+#define JPEG_SWAP_RB 0
+#endif
+
 #define SCREEN_W 240
 #define SCREEN_H 320
 
