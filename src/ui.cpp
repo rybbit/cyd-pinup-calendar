@@ -264,9 +264,9 @@ void drawGrid(int year, int month, const DateYMD &today, int selDay) {
 // Builds the page from whichever ad_ fields are set: each line reserves space only
 // when it has text, and the picture takes whatever height is left.
 void configureLayout() {
-  bool company = settings.adCompany.length();
-  bool addr = settings.adAddress1.length() || settings.adAddress2.length();
-  bool contact = settings.adContact.length();
+  bool company = settings.showCompany.length();
+  bool addr = settings.showAddress1.length() || settings.showAddress2.length();
+  bool contact = settings.showContact.length();
   mottoLine = settings.adMotto.length();
   bool any = company || addr || contact || mottoLine;
 
@@ -301,16 +301,16 @@ static void drawAd() {
   tft.fillRect(0, AD_Y, SCREEN_W, AD_H, PAPER);
   tft.drawFastHLine(0, AD_Y, SCREEN_W, GRIDLINE);
   tft.setTextColor(INK);
-  if (settings.adCompany.length())
-    drawFitted(settings.adCompany, SCREEN_W / 2, AD_Y + COMPANY_CY, &FreeSansBold9pt7b);
-  String addr = settings.adAddress1;
-  if (addr.length() && settings.adAddress2.length()) addr += "    ";
-  addr += settings.adAddress2;
+  if (settings.showCompany.length())
+    drawFitted(settings.showCompany, SCREEN_W / 2, AD_Y + COMPANY_CY, &FreeSansBold9pt7b);
+  String addr = settings.showAddress1;
+  if (addr.length() && settings.showAddress2.length()) addr += "    ";
+  addr += settings.showAddress2;
   if (addr.length()) {
     tft.setTextDatum(MC_DATUM);
     tft.drawString(addr, SCREEN_W / 2, AD_Y + ADDR_CY, 1);
   }
-  if (settings.adContact.length()) drawFitted(settings.adContact, SCREEN_W / 2, AD_Y + CONTACT_CY, nullptr);
+  if (settings.showContact.length()) drawFitted(settings.showContact, SCREEN_W / 2, AD_Y + CONTACT_CY, nullptr);
 }
 
 void drawMotto() {
@@ -344,7 +344,8 @@ void drawCalendarPage(const SeriesInfo &s, const CalendarMeta *meta, int year, i
 
 CalHit hitCalendar(int16_t x, int16_t y, int year, int month, int &day) {
   day = 0;
-  if (y < IMG_H + AD_H) return HIT_IMAGE;  // the ad block opens the picture too
+  if (y < IMG_H) return HIT_IMAGE;
+  if (y < IMG_H + AD_H) return HIT_AD;
   if (y < HDR_Y + HDR_H + 4) {  // header (a little extra slop below it)
     if (x < 60) return HIT_PREV;
     if (x > SCREEN_W - 60) return HIT_NEXT;
@@ -452,10 +453,11 @@ void drawMenu(const MenuState &s) {
 
   // buttons
   tft.fillRect(0, MENU_BTN_Y, SCREEN_W, MENU_BTN_H, PAPER_DARK);
-  int bw = SCREEN_W / 3;
+  int bw = SCREEN_W / 4;
   button(0 * bw, MENU_BTN_Y, bw, MENU_BTN_H, "UP", s.scroll > 0);
   button(1 * bw, MENU_BTN_Y, bw, MENU_BTN_H, "DOWN", s.scroll + MENU_ROWS < (int)vis.size());
   button(2 * bw, MENU_BTN_Y, bw, MENU_BTN_H, "SYNC", s.online);
+  button(3 * bw, MENU_BTN_Y, bw, MENU_BTN_H, "SETUP");
 }
 
 MenuHit hitMenu(int16_t x, int16_t y, int &row) {
@@ -463,10 +465,11 @@ MenuHit hitMenu(int16_t x, int16_t y, int &row) {
   if (y < MENU_TITLE_H) return x > SCREEN_W - 50 ? MHIT_CLOSE : MHIT_NONE;
   if (y < MENU_CAT_Y + MENU_CAT_H) return MHIT_CAT;
   if (y >= MENU_BTN_Y) {
-    switch (x * 3 / SCREEN_W) {
+    switch (x * 4 / SCREEN_W) {
       case 0: return MHIT_UP;
       case 1: return MHIT_DOWN;
-      default: return MHIT_SYNC;
+      case 2: return MHIT_SYNC;
+      default: return MHIT_SETUP;
     }
   }
   if (y >= MENU_LIST_Y && y < MENU_LIST_Y + MENU_ROWS * MENU_ROW_H) {

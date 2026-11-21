@@ -5,6 +5,8 @@ namespace Net {
 // Connects using settings.ssid / settings.pass (from /calendar/config.txt).
 // Returns true when online.
 bool connect(uint32_t timeoutMs = 20000);
+// Drops the current connection and connects with the current settings.
+bool reconnect(uint32_t timeoutMs = 20000);
 // Starts a connection attempt in the background (non-blocking).
 void kick();
 // Starts NTP without waiting.

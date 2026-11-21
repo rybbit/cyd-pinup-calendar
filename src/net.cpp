@@ -22,6 +22,12 @@ bool connect(uint32_t timeoutMs) {
   return WiFi.status() == WL_CONNECTED;
 }
 
+bool reconnect(uint32_t timeoutMs) {
+  WiFi.disconnect(true);
+  delay(300);
+  return connect(timeoutMs);
+}
+
 void kick() {
   if (settings.ssid.isEmpty() || WiFi.status() == WL_CONNECTED) return;
   WiFi.mode(WIFI_STA);
@@ -75,6 +81,7 @@ long download(const String &url, const String &path) {
   }
   if (SD.exists(path)) SD.remove(path);
   if (!SD.rename(tmp, path)) return -1;
+  Serial.printf("  got %s (%d bytes)\n", path.c_str(), written);
   return written;
 }
 

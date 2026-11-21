@@ -15,6 +15,7 @@
 #include "holidays.h"
 #include "net.h"
 #include "settings.h"
+#include "setup_ui.h"
 #include "store.h"
 #include "touch.h"
 #include "ui.h"
@@ -181,8 +182,12 @@ void openMenu(bool reload = true) {
 
 bool fetchSeries(const SeriesEntry &e) {
   const char *heading = e.downloaded() ? "UPDATING" : "DOWNLOADING";
-  return Store::downloadSeries(
+  Serial.printf("%s series %s (%s)\n", heading, e.id.c_str(), e.yearsLabel().c_str());
+  uint32_t start = millis();
+  bool ok = Store::downloadSeries(
       e, [&](const String &label, int done, int total) { UI::drawProgress(e.title, label, done, total, heading); });
+  Serial.printf("%s series %s: %s in %lu s\n", heading, e.id.c_str(), ok ? "OK" : "FAILED", (millis() - start) / 1000);
+  return ok;
 }
 
 // If GitHub has anything newer for the selected series, download it and reload,
@@ -223,6 +228,31 @@ void pickSeries(const SeriesEntry &e) {
   showCalendar();
 }
 
+// SETUP: edit config.txt on the device, then apply the new values.
+void openSetup() {
+  String oldSsid = settings.ssid, oldPass = settings.pass, oldCatalog = settings.catalogUrl;
+  if (Setup::run()) {
+    setenv("TZ", settings.tz.c_str(), 1);
+    tzset();
+    UI::configureLayout();
+    today = getToday();
+    bool wifiChanged = settings.ssid != oldSsid || settings.pass != oldPass;
+    if (wifiChanged && settings.ssid.length()) {
+      UI::drawMessage("WI-FI", "Connecting to", settings.ssid);
+      if (Net::reconnect()) {
+        UI::drawMessage("WI-FI", "Connected!", "Setting clock...");
+        Net::syncTime(5000);
+        today = getToday();
+      } else {
+        UI::drawMessage("WI-FI", "Could not connect to", settings.ssid, "Check the password in SETUP");
+        delay(2500);
+      }
+    }
+    if (Net::online() && (wifiChanged || settings.catalogUrl != oldCatalog)) Store::refreshCatalog();
+  }
+  openMenu(true);
+}
+
 void handleMenuTap(int16_t x, int16_t y) {
   int row;
   auto vis = menu.visible();
@@ -249,6 +279,7 @@ void handleMenuTap(int16_t x, int16_t y) {
       break;
     case UI::MHIT_SYNC:
       if (Net::online()) {
+        Serial.println("SYNC tapped");
         UI::drawMessage("SYNC", "Fetching calendar list...");
         if (!Store::refreshCatalog()) {
           UI::drawMessage("SYNC FAILED", "Could not download", "catalog.json", "Check catalog= in config.txt");
@@ -261,6 +292,9 @@ void handleMenuTap(int16_t x, int16_t y) {
       break;
     case UI::MHIT_ROW:
       if (menu.scroll + row < (int)vis.size()) pickSeries(menu.all[vis[menu.scroll + row]]);
+      break;
+    case UI::MHIT_SETUP:
+      openSetup();
       break;
     default:
       break;
@@ -276,6 +310,9 @@ void handleCalendarTap(int16_t x, int16_t y) {
     case UI::HIT_IMAGE:
       screen = SCR_FULL;
       UI::drawFullImage(series, currentMeta(), viewY, viewM);
+      break;
+    case UI::HIT_AD:  // the marketing block: a back door to the picker in dev only
+      if (settings.isDev()) openMenu(true);
       break;
     case UI::HIT_DAY: selectDay(day); break;
     case UI::HIT_STATUS:

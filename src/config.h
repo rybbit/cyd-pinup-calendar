@@ -43,6 +43,14 @@
 #ifndef CATALOG_URL_DEFAULT
 #define CATALOG_URL_DEFAULT "https://raw.githubusercontent.com/rybbit/cyd-pinup-calendar/main/content/catalog.json"
 #endif
+// env=dev fills an empty advertising block with these (set in platformio.ini)
+#ifndef DEV_ORGANIZATION
+#define DEV_ORGANIZATION "github.com/rybbit/cyd-pinup-calendar"
+#endif
+#ifndef DEV_CONTACT
+#define DEV_CONTACT ""
+#endif
+
 #ifndef TZ_DEFAULT
 #define TZ_DEFAULT "EST5EDT,M3.2.0,M11.1.0"
 #endif

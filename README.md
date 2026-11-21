@@ -85,7 +85,19 @@ You need a FAT32 microSD card. Calendars are stored in `/calendar/<calendar-id>/
 
    The boot log lists the values it read and flags any unrecognized key, which helps catch typos.
 
-   The file is read at boot, so reset the board after editing it. If Wi-Fi is down at boot, the board retries every 2 minutes on its own. The dot in the picker's title bar is green when it's online.
+   **`env`** (optional, `dev` or `prod`; default prod):
+   - `env=dev`: tapping the advertising block opens the calendar picker. If organization, address1, address2 and contact are all blank, the block shows `github.com/rybbit/cyd-pinup-calendar` and the developer contact instead. These are set by `DEV_ORGANIZATION` / `DEV_CONTACT` in `platformio.ini`.
+   - `env=prod`: tapping the block does nothing, and an all-blank block takes no space.
+
+   **Editing on the device.** Open the picker (tap the month name) and tap **SETUP**. Every value is listed; tap one to change it:
+   - **Wi-Fi:** scans nearby networks, then asks for the password. **TYPE NAME** handles hidden networks.
+   - **Time zone:** pick a US zone, or **CUSTOM** for a POSIX string.
+   - **Env:** choose dev or prod.
+   - **Everything else:** an on-screen keyboard (ABC for capitals, #+= for symbols).
+
+   **SAVE** rewrites `config.txt` in place, keeping your key spellings, comments and unknown lines, and applies the changes immediately: Wi-Fi reconnects, the clock's time zone updates, and the advertising layout redraws.
+
+   When you edit the file on a PC instead, reset the board afterwards: it's read at boot. If Wi-Fi is down at boot, the board retries every 2 minutes on its own. The dot in the picker's title bar is green when it's online.
 3. **Pick a calendar.** Tap the category bar to filter (All → Bikinis → Dogs → Guns → …), then tap a series. It downloads every year's edition with a progress bar, then opens to the current month.
 
 After that, the calendar boots straight to the current month, and downloaded calendars work without Wi-Fi. Without Wi-Fi the clock isn't set, though: the ESP32 has no battery-backed clock.
@@ -190,7 +202,8 @@ g++ -std=c++11 -I src test/host/test_holidays.cpp src/holidays.cpp -o /tmp/th &&
 | `src/ui.cpp` | drawing: calendar page, full-screen picture, picker, progress |
 | `src/store.cpp` | series/edition catalog, SD layout, custom calendars, incremental downloads |
 | `src/net.cpp` | Wi-Fi, NTP, HTTPS → SD download |
-| `src/settings.cpp` | `/calendar/config.txt` parser + selected calendar (NVS) |
+| `src/settings.cpp` | `/calendar/config.txt` read/write + selected calendar (NVS) |
+| `src/setup_ui.cpp` | on-device settings editor: list, keyboard, Wi-Fi scan, time zones |
 | `src/touch.cpp` | bit-banged XPT2046 + 3-point calibration (saved in NVS) |
 | `src/holidays.cpp` | US holiday engine (pure C++) |
 | `tools/` | image/catalog builders |

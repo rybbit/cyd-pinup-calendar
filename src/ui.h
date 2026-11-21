@@ -37,7 +37,7 @@ void configureLayout();
 bool mottoMode();  // bottom line shows the motto instead of cycling holidays
 
 // --- calendar page ---
-enum CalHit { HIT_NONE, HIT_PREV, HIT_NEXT, HIT_TITLE, HIT_IMAGE, HIT_DAY, HIT_STATUS };
+enum CalHit { HIT_NONE, HIT_PREV, HIT_NEXT, HIT_TITLE, HIT_IMAGE, HIT_AD, HIT_DAY, HIT_STATUS };
 // meta == nullptr means the series has no edition for `year`: a placeholder is shown.
 void drawCalendarPage(const SeriesInfo &s, const CalendarMeta *meta, int year, int month, const DateYMD &today,
                       int selDay);
@@ -60,7 +60,7 @@ struct MenuState {
   bool online = false;
   std::vector<int> visible() const;  // indices into `all`
 };
-enum MenuHit { MHIT_NONE, MHIT_CLOSE, MHIT_CAT, MHIT_ROW, MHIT_UP, MHIT_DOWN, MHIT_SYNC };
+enum MenuHit { MHIT_NONE, MHIT_CLOSE, MHIT_CAT, MHIT_ROW, MHIT_UP, MHIT_DOWN, MHIT_SYNC, MHIT_SETUP };
 void drawMenu(const MenuState &s);
 MenuHit hitMenu(int16_t x, int16_t y, int &row);
 
