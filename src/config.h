@@ -45,7 +45,7 @@
 #endif
 // env=dev fills an empty advertising block with these (set in platformio.ini)
 #ifndef DEV_ORGANIZATION
-#define DEV_ORGANIZATION "github.com/rybbit/cyd-pinup-calendar"
+#define DEV_ORGANIZATION "cyd-pinup-calendar"
 #endif
 #ifndef DEV_CONTACT
 #define DEV_CONTACT ""

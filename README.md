@@ -86,7 +86,7 @@ You need a FAT32 microSD card. Calendars are stored in `/calendar/<calendar-id>/
    The boot log lists the values it read and flags any unrecognized key, which helps catch typos.
 
    **`env`** (optional, `dev` or `prod`; default prod):
-   - `env=dev`: tapping the advertising block opens the calendar picker. If organization, address1, address2 and contact are all blank, the block shows `github.com/rybbit/cyd-pinup-calendar` and the developer contact instead. These are set by `DEV_ORGANIZATION` / `DEV_CONTACT` in `platformio.ini`.
+   - `env=dev`: tapping the advertising block opens the calendar picker. If organization, address1, address2 and contact are all blank, the block shows the project name `cyd-pinup-calendar` (in the large organization font) and the developer contact instead. These are set by `DEV_ORGANIZATION` / `DEV_CONTACT` in `platformio.ini`.
    - `env=prod`: tapping the block does nothing, and an all-blank block takes no space.
 
    **Editing on the device.** Open the picker (tap the month name) and tap **SETUP**. Every value is listed; tap one to change it:
