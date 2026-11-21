@@ -13,11 +13,14 @@
     },
     {
       "id": "dogs",
-      "title": "Dog Pin-Ups",
+      "title": "Dog Days",
       "category": "Dogs",
-      "version": "6724d213ca8f",
+      "version": "fa143c167537",
       "years": {
-        "2027": "2ce715795e7c"
+        "2026": "37fc6a6b115f",
+        "2027": "fb3c8db9bf8c",
+        "2028": "c00a49ff3a18",
+        "2029": "ddfe11258245"
       }
     },
     {

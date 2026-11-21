@@ -1,0 +1,62 @@
+{
+  "year": 2026,
+  "title": "First Frost",
+  "months": [
+    {
+      "caption": "",
+      "crop_y": 0
+    },
+    {
+      "caption": "",
+      "crop_y": 0
+    },
+    {
+      "caption": "",
+      "crop_y": 0
+    },
+    {
+      "caption": "",
+      "crop_y": 0
+    },
+    {
+      "caption": "",
+      "crop_y": 0
+    },
+    {
+      "caption": "",
+      "crop_y": 0
+    },
+    {
+      "caption": "",
+      "crop_y": 0
+    },
+    {
+      "caption": "",
+      "crop_y": 0
+    },
+    {
+      "caption": "",
+      "crop_y": 0
+    },
+    {
+      "caption": "",
+      "crop_y": 75,
+      "fit": "frame",
+      "sha": "734839e1a980",
+      "top_sha": "fce710d8cf95"
+    },
+    {
+      "caption": "",
+      "crop_y": 75,
+      "sha": "6e9416beade1",
+      "top_sha": "b88a90e10d24"
+    },
+    {
+      "caption": "",
+      "crop_y": 75,
+      "sha": "15e0ec208450",
+      "top_sha": "f4238663ef72"
+    }
+  ],
+  "version": "37fc6a6b115f"
+}

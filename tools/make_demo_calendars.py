@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Generate placeholder Dogs / Bikinis editions so the whole pipeline
-(GitHub -> CYD download -> SD card -> display) can be tested before real art exists.
+"""Generate placeholder-art demo series (demo-dogs, demo-bikinis) to test the whole
+pipeline (GitHub -> CYD download -> SD card -> display). They use their own series
+ids so they never overwrite real calendars.
 
     python3 tools/make_demo_calendars.py [--year 2027] [--only dogs guns]
 
@@ -19,8 +20,8 @@ MONTHS = ["January", "February", "March", "April", "May", "June",
 
 # series id, series title, category, edition title, colors
 DEMOS = [
-    ("dogs", "Dog Pin-Ups", "Dogs", "Good Boys & Girls", [(245, 190, 80), (200, 90, 40)]),
-    ("bikinis", "Bikini Pin-Ups", "Bikinis", "Sun, Sand & Swimsuits", [(90, 200, 230), (240, 110, 120)]),
+    ("demo-dogs", "Demo Dogs", "Demo", "Good Boys & Girls", [(245, 190, 80), (200, 90, 40)]),
+    ("demo-bikinis", "Demo Bikinis", "Demo", "Sun, Sand & Swimsuits", [(90, 200, 230), (240, 110, 120)]),
 ]
 
 

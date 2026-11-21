@@ -1,67 +1,86 @@
 {
   "year": 2027,
-  "title": "Good Boys & Girls",
+  "title": "Tails from the Campsite",
   "months": [
     {
-      "caption": "Miss January",
-      "crop_y": 30,
-      "sha": "36ffd3aa7c3c"
+      "caption": "",
+      "crop_y": 75,
+      "sha": "0a6b8fd26994",
+      "top_sha": "4f189a5d87ce"
     },
     {
-      "caption": "Miss February",
-      "crop_y": 30,
-      "sha": "6d7c21f27d36"
+      "caption": "",
+      "crop_y": 75,
+      "sha": "18086b5331fd",
+      "top_sha": "2011712fc2b5"
     },
     {
-      "caption": "Miss March",
-      "crop_y": 30,
-      "sha": "ea22970d0eaa"
+      "caption": "",
+      "crop_y": 75,
+      "fit": "frame",
+      "sha": "8313d4b6ec36",
+      "top_sha": "f993807b5a64"
     },
     {
-      "caption": "Miss April",
-      "crop_y": 30,
-      "sha": "cbd6737ca130"
+      "caption": "",
+      "crop_y": 75,
+      "fit": "frame",
+      "sha": "7da8161f943f",
+      "top_sha": "a5018b235cd0"
     },
     {
-      "caption": "Miss May",
-      "crop_y": 30,
-      "sha": "d6cf96bcb23b"
+      "caption": "",
+      "crop_y": 75,
+      "sha": "1d3508149764",
+      "top_sha": "ee49098d9be5"
     },
     {
-      "caption": "Miss June",
-      "crop_y": 30,
-      "sha": "7812ff6fb8f8"
+      "caption": "",
+      "crop_y": 75,
+      "sha": "57a813557620",
+      "top_sha": "46ab37f95fdf"
     },
     {
-      "caption": "Miss July",
-      "crop_y": 30,
-      "sha": "a100ee8d8144"
+      "caption": "",
+      "crop_y": 75,
+      "fit": "frame",
+      "sha": "06a12719c3c7",
+      "top_sha": "d2bac6cb3599"
     },
     {
-      "caption": "Miss August",
-      "crop_y": 30,
-      "sha": "c804c41057c9"
+      "caption": "",
+      "crop_y": 75,
+      "fit": "frame",
+      "sha": "d7588fcd052e",
+      "top_sha": "ec7f39b186bc"
     },
     {
-      "caption": "Miss September",
-      "crop_y": 30,
-      "sha": "840f728a6824"
+      "caption": "",
+      "crop_y": 75,
+      "sha": "7ce7d7fe74ac",
+      "top_sha": "0bb48aea83e4"
     },
     {
-      "caption": "Miss October",
-      "crop_y": 30,
-      "sha": "7c1c7e51e248"
+      "caption": "",
+      "crop_y": 75,
+      "fit": "frame",
+      "sha": "fe955b6a6dd5",
+      "top_sha": "57cd788549ea"
     },
     {
-      "caption": "Miss November",
-      "crop_y": 30,
-      "sha": "8850b5f3967b"
+      "caption": "",
+      "crop_y": 75,
+      "fit": "frame",
+      "sha": "017520bd5619",
+      "top_sha": "99f0cc141651"
     },
     {
-      "caption": "Miss December",
-      "crop_y": 30,
-      "sha": "84045e8c3bd0"
+      "caption": "",
+      "crop_y": 75,
+      "fit": "frame",
+      "sha": "1a6c86163dc9",
+      "top_sha": "17b8d15027cb"
     }
   ],
-  "version": "2ce715795e7c"
+  "version": "fb3c8db9bf8c"
 }

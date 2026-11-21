@@ -1,0 +1,84 @@
+{
+  "year": 2028,
+  "title": "Sit. Stay. Smile.",
+  "months": [
+    {
+      "caption": "",
+      "crop_y": 75,
+      "sha": "eccb1336c14a",
+      "top_sha": "7fe509c348c1"
+    },
+    {
+      "caption": "",
+      "crop_y": 75,
+      "sha": "81d20791df66",
+      "top_sha": "c0f584c4658f"
+    },
+    {
+      "caption": "",
+      "crop_y": 75,
+      "fit": "frame",
+      "sha": "df6d941d69e1",
+      "top_sha": "979529291c4d"
+    },
+    {
+      "caption": "",
+      "crop_y": 75,
+      "sha": "a0da21e54e0e",
+      "top_sha": "b7a2e58764b4"
+    },
+    {
+      "caption": "",
+      "crop_y": 75,
+      "fit": "frame",
+      "sha": "431f2cef4bd8",
+      "top_sha": "2dc396a97ade"
+    },
+    {
+      "caption": "",
+      "crop_y": 75,
+      "sha": "32593c8c5851",
+      "top_sha": "76f93cdd603a"
+    },
+    {
+      "caption": "",
+      "crop_y": 75,
+      "sha": "b30a9c404c40",
+      "top_sha": "3dd13f6196a0"
+    },
+    {
+      "caption": "",
+      "crop_y": 75,
+      "fit": "frame",
+      "sha": "cac3e0b8456a",
+      "top_sha": "78d9f30b3f1b"
+    },
+    {
+      "caption": "",
+      "crop_y": 75,
+      "sha": "c3958bae1af3",
+      "top_sha": "5118d9bb453d"
+    },
+    {
+      "caption": "",
+      "crop_y": 75,
+      "fit": "frame",
+      "sha": "11e92f9a81c4",
+      "top_sha": "b3796f250d51"
+    },
+    {
+      "caption": "",
+      "crop_y": 75,
+      "fit": "frame",
+      "sha": "18adee0ed686",
+      "top_sha": "7aa66799ef6e"
+    },
+    {
+      "caption": "",
+      "crop_y": 75,
+      "sha": "0fac768e92cb",
+      "top_sha": "d4f8f234d75e"
+    }
+  ],
+  "version": "c00a49ff3a18"
+}
