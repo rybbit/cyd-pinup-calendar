@@ -4,7 +4,6 @@
 #include <SD.h>
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
-#include <WiFiManager.h>
 #include <time.h>
 
 #include "config.h"
@@ -12,44 +11,21 @@
 
 namespace Net {
 
-bool hasCredentials() {
-  WiFiManager wm;
-  return wm.getWiFiIsSaved();
-}
-
 bool connect(uint32_t timeoutMs) {
   if (WiFi.status() == WL_CONNECTED) return true;
+  if (settings.ssid.isEmpty()) return false;
   WiFi.mode(WIFI_STA);
   WiFi.setAutoReconnect(true);
-  WiFi.begin();  // uses credentials saved by WiFiManager
+  WiFi.begin(settings.ssid.c_str(), settings.pass.c_str());
   uint32_t start = millis();
   while (WiFi.status() != WL_CONNECTED && millis() - start < timeoutMs) delay(200);
   return WiFi.status() == WL_CONNECTED;
 }
 
-bool runPortal() {
-  WiFiManager wm;
-  WiFiManagerParameter pUrl("catalog", "Calendar catalog URL", settings.catalogUrl.c_str(), 200);
-  WiFiManagerParameter pTz("tz", "Time zone (POSIX, e.g. CST6CDT,M3.2.0,M11.1.0)", settings.tz.c_str(), 64);
-  wm.addParameter(&pUrl);
-  wm.addParameter(&pTz);
-  wm.setTitle("Pin-Up Calendar");
-  wm.setConfigPortalTimeout(180);
-  wm.setConnectTimeout(20);
-  wm.setBreakAfterConfig(true);  // return even if the new credentials fail, so params still save
-  bool ok = wm.startConfigPortal(WIFI_AP_NAME);
-
-  String url = pUrl.getValue();
-  String tz = pTz.getValue();
-  url.trim();
-  tz.trim();
-  bool changed = false;
-  if (url.length() && url != settings.catalogUrl) { settings.catalogUrl = url; changed = true; }
-  if (tz.length() && tz != settings.tz) { settings.tz = tz; changed = true; }
-  if (changed) settings.save();
-
-  if (!ok) ok = connect(10000);
-  return ok;
+bool reconnect(uint32_t timeoutMs) {
+  WiFi.disconnect(true);
+  delay(200);
+  return connect(timeoutMs);
 }
 
 bool online() { return WiFi.status() == WL_CONNECTED; }

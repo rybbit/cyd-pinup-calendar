@@ -150,16 +150,26 @@ void openMenu(bool reload = true) {
   UI::drawMenu(menu);
 }
 
+// Re-reads /config/wifi.conf and (re)connects.
 void wifiSetup() {
-  UI::drawMessage("WI-FI SETUP", "On your phone, join Wi-Fi:", WIFI_AP_NAME, "then open 192.168.4.1");
-  bool ok = Net::runPortal();
+  bool haveConf = settings.loadWifiConf();
+  setenv("TZ", settings.tz.c_str(), 1);
+  tzset();
+  if (!haveConf) {
+    UI::drawMessage("NO WI-FI CONFIG", settings.confFound ? "No ssid= line in" : "Missing file on SD card:",
+                    WIFI_CONF_PATH, "ssid=...  and  pass=...");
+    delay(3500);
+    return;
+  }
+  UI::drawMessage("WI-FI", "Connecting to", settings.ssid);
+  bool ok = Net::reconnect();
   if (ok) {
     UI::drawMessage("WI-FI", "Connected!", "Setting clock & fetching list...");
     Net::syncTime();
     today = getToday();
     Store::refreshCatalog();
   } else {
-    UI::drawMessage("WI-FI", "Not connected.", "Calendars on the SD card", "still work offline.");
+    UI::drawMessage("WI-FI", "Could not connect to", settings.ssid, "Check " WIFI_CONF_PATH);
     delay(2000);
   }
 }
@@ -225,7 +235,7 @@ void handleMenuTap(int16_t x, int16_t y) {
       if (Net::online()) {
         UI::drawMessage("SYNC", "Fetching calendar list...");
         if (!Store::refreshCatalog()) {
-          UI::drawMessage("SYNC FAILED", "Could not download", "catalog.json", "Check the URL in WI-FI setup.");
+          UI::drawMessage("SYNC FAILED", "Could not download", "catalog.json", "Check catalog= in wifi.conf");
           delay(2500);
         }
         openMenu(true);
@@ -282,8 +292,6 @@ void setup() {
   UI::begin();
   Touch::begin();
   settings.load();
-  setenv("TZ", settings.tz.c_str(), 1);
-  tzset();
 
   UI::drawMessage("PIN-UP CALENDAR", "Starting up...", "", "Hold screen to recalibrate");
   int16_t tx, ty;
@@ -299,11 +307,15 @@ void setup() {
     delay(2000);
   }
 
-  if (Net::hasCredentials()) {
-    UI::drawMessage("PIN-UP CALENDAR", "Connecting to Wi-Fi...");
+  bool haveConf = settings.loadWifiConf();
+  setenv("TZ", settings.tz.c_str(), 1);
+  tzset();
+  if (haveConf) {
+    UI::drawMessage("PIN-UP CALENDAR", "Connecting to Wi-Fi...", settings.ssid);
     Net::connect();
   } else {
-    wifiSetup();
+    UI::drawMessage("NO WI-FI CONFIG", "Create " WIFI_CONF_PATH, "on the SD card with lines", "ssid=...  and  pass=...");
+    delay(4000);
   }
   if (Net::online()) {
     UI::drawMessage("PIN-UP CALENDAR", "Setting the clock...");

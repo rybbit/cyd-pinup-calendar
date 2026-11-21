@@ -2,13 +2,11 @@
 #include <Arduino.h>
 
 namespace Net {
-// True if Wi-Fi credentials have been stored by a previous setup.
-bool hasCredentials();
-// Connects with stored credentials (no portal). Returns true when online.
-bool connect(uint32_t timeoutMs = 15000);
-// Runs the captive setup portal (blocking, 3 min timeout). Also lets the user
-// edit the catalog URL and time zone; changes are written to `settings`.
-bool runPortal();
+// Connects using settings.ssid / settings.pass (from /config/wifi.conf).
+// Returns true when online.
+bool connect(uint32_t timeoutMs = 20000);
+// Drops the current connection and connects again (after wifi.conf was re-read).
+bool reconnect(uint32_t timeoutMs = 20000);
 bool online();
 // Starts NTP using settings.tz and waits up to timeoutMs for a valid time.
 bool syncTime(uint32_t timeoutMs = 10000);

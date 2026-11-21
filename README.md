@@ -51,10 +51,19 @@ You need a FAT32 microSD card. Calendars are stored in `/calendar/<calendar-id>/
 ## First boot
 
 1. **Touch calibration.** Tap the three crosshairs with the stylus. To redo it later, hold the screen while "Hold screen to recalibrate" is shown at power-up.
-2. **Wi-Fi.** On your phone, join the `PinUp-Calendar` network and open `192.168.4.1`. Pick your Wi-Fi network. The same page has two more fields:
-   * **Calendar catalog URL**: where the list of calendars lives (see below).
-   * **Time zone**: a POSIX TZ string. Defaults to US Eastern. Use one of:
-     `CST6CDT,M3.2.0,M11.1.0` (Central), `MST7MDT,M3.2.0,M11.1.0` (Mountain), `MST7` (Arizona), `PST8PDT,M3.2.0,M11.1.0` (Pacific), `AKST9AKDT,M3.2.0,M11.1.0` (Alaska), `HST10` (Hawaii).
+2. **Wi-Fi.** Create `/config/wifi.conf` on the SD card:
+
+   ```
+   ssid=MyNetwork
+   pass=MyPassword
+   # optional:
+   tz=CST6CDT,M3.2.0,M11.1.0
+   catalog=https://raw.githubusercontent.com/rybbit/cyd-pinup-calendar/main/content/catalog.json
+   ```
+
+   `tz` is a POSIX time zone string. The default is US Eastern (`EST5EDT,M3.2.0,M11.1.0`). Use one of:
+   `CST6CDT,M3.2.0,M11.1.0` (Central), `MST7MDT,M3.2.0,M11.1.0` (Mountain), `MST7` (Arizona), `PST8PDT,M3.2.0,M11.1.0` (Pacific), `AKST9AKDT,M3.2.0,M11.1.0` (Alaska), `HST10` (Hawaii).
+   The file is read at boot. After editing it, tap **WI-FI** in the picker to re-read it and reconnect.
 3. **Pick a calendar.** Tap the category bar to filter (All → Bikinis → Dogs → Guns → …), then tap a calendar. It downloads all 12 images with a progress bar, then opens to the current month.
 
 After that, the calendar boots straight to the current month, and downloaded calendars work without Wi-Fi. Without Wi-Fi the clock isn't set, though: the ESP32 has no battery-backed clock.
@@ -71,7 +80,7 @@ content/calendars/<id>/01.jpg … 12.jpg   240x320 baseline JPEG
 
 1. The firmware reads the catalog from
    `https://raw.githubusercontent.com/rybbit/cyd-pinup-calendar/main/content/catalog.json`
-   (set in `platformio.ini`; it can also be changed in the Wi-Fi portal).
+   (set in `platformio.ini`; override with `catalog=` in `wifi.conf`).
 2. Build a calendar from any 12 pictures (they're sorted by filename, January to December):
 
    ```sh
@@ -110,7 +119,8 @@ g++ -std=c++11 -I src test/host/test_holidays.cpp src/holidays.cpp -o /tmp/th &&
 | `src/main.cpp` | boot sequence, screens, tap handling |
 | `src/ui.cpp` | drawing: calendar page, full-screen picture, picker, progress |
 | `src/store.cpp` | catalog + SD layout + calendar download |
-| `src/net.cpp` | Wi-Fi (WiFiManager portal), NTP, HTTPS → SD download |
+| `src/net.cpp` | Wi-Fi, NTP, HTTPS → SD download |
+| `src/settings.cpp` | `/config/wifi.conf` parser + selected calendar (NVS) |
 | `src/touch.cpp` | bit-banged XPT2046 + 3-point calibration (saved in NVS) |
 | `src/holidays.cpp` | US holiday engine (pure C++) |
 | `tools/` | image/catalog builders |

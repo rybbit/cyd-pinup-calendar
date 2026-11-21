@@ -38,5 +38,5 @@
 #define TZ_DEFAULT "EST5EDT,M3.2.0,M11.1.0"
 #endif
 
-#define WIFI_AP_NAME "PinUp-Calendar"
+#define WIFI_CONF_PATH "/config/wifi.conf"
 #define MAX_IMAGE_BYTES (120 * 1024)
