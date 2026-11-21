@@ -9,7 +9,7 @@ You pick a calendar series (Dogs, Guns, Bikinis, and any you add). Each series h
 │     pin-up art     │  of a 240x320 image, tap for full screen)
 │   Miss November    │
 ├────────────────────┤
-│ ◀  NOVEMBER 2026 ▶ │  tap arrows: prev/next month · tap title: big calendar · hold: picker
+│ ◀  NOVEMBER 2026 ▶ │  tap arrows: prev/next month · tap title: big calendar · hold (dev): picker
 │ S  M  T  W  T  F  S│
 │ 1• 2  3• 4  5  6  7│  red pill = federal holiday / observed day off
 │ 8  9 10 (11)12 13 14│  blue dot = observance (Halloween, Mother's Day…)
@@ -90,16 +90,18 @@ You need a FAT32 microSD card. Calendars are stored in `/calendar/<calendar-id>/
    | On the calendar page | env=prod | env=dev |
    |---|---|---|
    | Tap month name | big calendar | big calendar |
-   | Tap advertising block | big calendar | calendar picker |
-   | Long press (~0.7 s) month name | calendar picker | calendar picker |
-   | Long press (~0.7 s) advertising block | calendar picker | calendar picker |
+   | Tap advertising block | big calendar | big calendar |
+   | Long press (~0.7 s) month name | same as a tap: big calendar | calendar picker |
+   | Long press (~0.7 s) advertising block | same as a tap: big calendar | calendar picker |
    | Tap picture | full-screen picture | full-screen picture |
+
+   A prod board has no way into the picker or SETUP, which suits a gift or a unit that shouldn't be changed. To change one, set `env=dev` in `config.txt` on the card.
 
    With `env=dev`, if organization, address1, address2 and contact are all blank, the block shows the project name `cyd-pinup-calendar` (in the large organization font) and the developer contact instead. These are set by `DEV_ORGANIZATION` / `DEV_CONTACT` in `platformio.ini`. With `env=prod`, an all-blank block takes no space.
 
    **Big calendar.** Tapping the month name shows the month filling the whole screen, with large numbers and the holidays cycling along the bottom. ◀ ▶ change month and tapping a day shows its holidays. Tap the month name or the bottom line to go back.
 
-   **Editing on the device.** Open the picker (long-press the month name) and tap **SETUP**. Every value is listed; tap one to change it:
+   **Editing on the device** (env=dev). Open the picker (long-press the month name or the advertising block) and tap **SETUP**. Every value is listed; tap one to change it:
    - **Wi-Fi:** scans nearby networks, then asks for the password. **TYPE NAME** handles hidden networks.
    - **Time zone:** pick a US zone, or **CUSTOM** for a POSIX string.
    - **Env:** choose dev or prod.

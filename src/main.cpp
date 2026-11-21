@@ -6,8 +6,9 @@
 //                 Taps on the month name and the marketing block:
 //                                            env=prod          env=dev
 //                   tap month name           big calendar      big calendar
-//                   tap marketing block      big calendar      calendar picker
-//                   long press either        calendar picker   calendar picker
+//                   tap marketing block      big calendar      big calendar
+//                   long press either        (same as a tap)   calendar picker
+//                 A prod unit has no way into the picker or SETUP: that's deliberate.
 // Boot:           hold a finger/stylus on the screen while "Hold to recalibrate" is shown
 //                 to redo touch calibration.
 //
@@ -343,17 +344,16 @@ void handleCalendarTap(int16_t x, int16_t y) {
   switch (UI::hitCalendar(x, y, viewY, viewM, day)) {
     case UI::HIT_PREV: changeMonth(-1); break;
     case UI::HIT_NEXT: changeMonth(+1); break;
-    case UI::HIT_TITLE:  // tap: big calendar; long press: calendar picker
-      if (longPress()) openMenu(true);
+    case UI::HIT_TITLE:  // month name
+    case UI::HIT_AD:     // marketing block
+      // Tap: big calendar. Long press: calendar picker, in dev only. A prod unit (a gift,
+      // or one that shouldn't be changed) has no way into the picker or SETUP.
+      if (settings.isDev() && longPress()) openMenu(true);
       else showBigCalendar();
       break;
     case UI::HIT_IMAGE:
       screen = SCR_FULL;
       UI::drawFullImage(series, currentMeta(), viewY, viewM);
-      break;
-    case UI::HIT_AD:  // marketing block: long press (or any tap in dev) opens the picker
-      if (settings.isDev() || longPress()) openMenu(true);
-      else showBigCalendar();
       break;
     case UI::HIT_DAY: selectDay(day); break;
     case UI::HIT_STATUS:
