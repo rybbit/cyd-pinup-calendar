@@ -11,7 +11,7 @@ You pick a calendar series (Dogs, Guns, Bikinis, and any you add). Each series h
 ├────────────────────┤
 │ ◀  NOVEMBER 2026 ▶ │  tap arrows: prev/next month · tap title: big calendar · hold (dev): picker
 │ S  M  T  W  T  F  S│
-│ 1• 2  3• 4  5  6  7│  red pill = federal holiday / observed day off
+│ 1• 2  3• 4  5  6  7│  red square = federal holiday / observed day off
 │ 8  9 10 (11)12 13 14│  blue dot = observance (Halloween, Mother's Day…)
 │ …                  │  box = today, tap a day to see its holidays
 ├────────────────────┤

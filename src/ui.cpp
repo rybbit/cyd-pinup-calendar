@@ -321,21 +321,19 @@ void drawGrid(int year, int month, const DateYMD &today, int selDay) {
       }
     bool isToday = today.y == year && today.m == month && today.d == d;
 
-    uint16_t fg = col == 0 ? RED : INK;
-    if (d == selDay) {
-      tft.fillRect(x + 1, y + 1, w - 1, ROW_H - 1, GOLD);
-    }
-    if (dayOff) {
-      tft.fillRoundRect(x + 3, y + 1, w - 5, ROW_H - 2, 4, RED);
-      fg = PAPER;
-    }
+    // Federal holidays fill the whole square in the theme color; the tapped day is gold
+    // (a tapped holiday stays gold, with its text in the theme color).
+    bool selected = d == selDay;
+    bool filled = dayOff && !selected;  // white text on the theme color
+    uint16_t fg = filled ? PAPER : (col == 0 || dayOff) ? RED : INK;
+    if (selected || dayOff) tft.fillRect(x + 1, y + 1, w - 1, ROW_H - 1, selected ? GOLD : RED);
     if (isToday) {
       tft.drawRect(x + 1, y + 1, w - 1, ROW_H - 1, INK);
       tft.drawRect(x + 2, y + 2, w - 3, ROW_H - 3, INK);
     }
     if (observance) {
-      if (bigCal) tft.fillCircle(x + w - 6, y + 6, 3, dayOff ? PAPER : BLUE);  // top-right: label below
-      else tft.fillCircle(x + w - 5, y + ROW_H - 5, 2, dayOff ? PAPER : BLUE);
+      if (bigCal) tft.fillCircle(x + w - 6, y + 6, 3, filled ? PAPER : BLUE);  // top-right: label below
+      else tft.fillCircle(x + w - 5, y + ROW_H - 5, 2, filled ? PAPER : BLUE);
     }
     tft.setTextColor(fg);
     if (bigCal) {  // like a printed wall calendar: small number in the top-left of a big box
@@ -344,7 +342,7 @@ void drawGrid(int year, int month, const DateYMD &today, int selDay) {
       if (label) {  // holiday name in two short lines under the number
         String l = shortHolidayName(label);
         int nl = l.indexOf('\n');
-        tft.setTextColor(dayOff ? PAPER : BLUE);
+        tft.setTextColor(filled ? PAPER : dayOff ? RED : BLUE);
         tft.drawString(nl < 0 ? l : l.substring(0, nl), x + 3, y + 21, 1);
         if (nl >= 0) tft.drawString(l.substring(nl + 1), x + 3, y + 30, 1);
       }
