@@ -370,10 +370,9 @@ static void pickMottoFont();
 void configureLayout() {
   setBigCalendar(false);
   pickMottoFont();
-  Serial.printf("Motto/clock font: %s\n", MOTTO_FF == &FreeSerifBoldItalic9pt7b ? "serif bold italic"
-                                          : MOTTO_FF == &FreeSerifItalic9pt7b    ? "serif italic"
-                                          : MOTTO_FONT == 2                      ? "built-in 2"
-                                                                                 : "built-in 1");
+  Serial.printf("Motto/clock font: %s\n", MOTTO_FF       ? "serif bold italic"
+                                          : MOTTO_FONT == 2 ? "built-in 2"
+                                                            : "built-in 1");
   bool company = settings.showCompany.length();
   bool addr = settings.showAddress1.length() || settings.showAddress2.length();
   bool contact = settings.showContact.length();
@@ -440,7 +439,7 @@ static void drawInMottoFont(const String &text, int x, int cy, int align) {
     tft.setTextFont(1);
   } else {
     tft.setTextDatum(align == 0 ? ML_DATUM : align == 1 ? MC_DATUM : MR_DATUM);
-    tft.drawString(text, x, cy + 1, MOTTO_FONT);
+    tft.drawString(text, x, cy, MOTTO_FONT);
   }
   tft.setTextDatum(MC_DATUM);
 }
@@ -453,14 +452,12 @@ static int mottoFontWidth(const String &text) {
   return w;
 }
 
-// Picks the motto font: bold serif italic, then regular serif italic, then built-in fonts.
+// Picks the motto font: bold serif italic if it fits, otherwise built-in font 2 (or 1).
 static void pickMottoFont() {
   const String &m = settings.adMotto;
-  const int maxW = SCREEN_W - 4;
+  const int maxW = SCREEN_W - 8;
   MOTTO_FF = &FreeSerifBoldItalic9pt7b;
   if (m.isEmpty() || mottoFontWidth(m) <= maxW) return;
-  MOTTO_FF = &FreeSerifItalic9pt7b;
-  if (mottoFontWidth(m) <= maxW) return;
   MOTTO_FF = nullptr;
   MOTTO_FONT = tft.textWidth(m, 2) <= maxW ? 2 : 1;
 }
