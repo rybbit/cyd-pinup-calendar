@@ -12,12 +12,12 @@ AppSettings settings;
 namespace {
 // Canonical config.txt keys, in the order new keys are appended when saving.
 const char *const KEYS[] = {"ssid",     "pass",     "tz",      "catalog", "organization",
-                            "address1", "address2", "contact", "motto",   "env", "theme"};
+                            "address1", "address2", "contact", "motto",   "env", "theme", "location"};
 const int NKEYS = sizeof(KEYS) / sizeof(KEYS[0]);
 
 String *member(AppSettings &s, int i) {
   String *m[] = {&s.ssid,       &s.pass,       &s.tz,        &s.catalogUrl, &s.adCompany,
-                 &s.adAddress1, &s.adAddress2, &s.adContact, &s.adMotto,    &s.env, &s.theme};
+                 &s.adAddress1, &s.adAddress2, &s.adContact, &s.adMotto,    &s.env, &s.theme, &s.location};
   return m[i];
 }
 }  // namespace
@@ -32,6 +32,7 @@ String canonicalKey(String key) {
   if (key == "catalog" || key == "catalog_url") return "catalog";
   if (key == "organization" || key == "company") return "organization";
   if (key == "contact" || key == "phone" || key == "email") return "contact";
+  if (key == "location" || key == "zip" || key == "weather") return "location";
   for (int i = 0; i < NKEYS; i++)
     if (key == KEYS[i]) return key;
   return "";
@@ -60,7 +61,7 @@ void AppSettings::computeDisplay() {
 }
 
 bool AppSettings::loadConfig() {
-  ssid = pass = env = theme = "";
+  ssid = pass = env = theme = location = "";
   catalogUrl = CATALOG_URL_DEFAULT;
   tz = TZ_DEFAULT;
   adCompany = adAddress1 = adAddress2 = adContact = adMotto = "";

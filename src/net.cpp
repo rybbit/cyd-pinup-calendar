@@ -48,6 +48,21 @@ bool syncTime(uint32_t timeoutMs) {
   return timeValid();
 }
 
+bool getString(const String &url, String &out, uint32_t timeoutMs) {
+  if (!online()) return false;
+  WiFiClientSecure client;
+  client.setInsecure();
+  HTTPClient http;
+  http.setTimeout(timeoutMs);
+  if (!http.begin(client, url)) return false;
+  int code = http.GET();
+  bool ok = code == HTTP_CODE_OK;
+  if (ok) out = http.getString();
+  else Serial.printf("GET %s -> %d\n", url.c_str(), code);
+  http.end();
+  return ok;
+}
+
 long download(const String &url, const String &path) {
   if (!online()) return -1;
   WiFiClientSecure client;

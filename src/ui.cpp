@@ -12,6 +12,8 @@ using namespace Layout;
 
 namespace {
 // Calendar page geometry; see the table in ui.h. Set by UI::configureLayout().
+int CLOCK_H = 0;  // white clock/weather bar at the top
+int IMG_Y = 0;    // picture window starts below the clock bar
 int IMG_H = 170;
 int AD_Y = 170, AD_H = 0;
 int HDR_Y = 170, HDR_H = 24;
@@ -25,19 +27,19 @@ const int CLASSIC_IMG_H = 170;  // crop_y values in calendar.json are tuned for 
 // Full-screen calendar: the same drawing code with this geometry swapped in.
 bool bigCal = false;
 struct Geometry {
-  int imgH, adY, adH, hdrY, hdrH, dowY, dowH, gridY, rowH, statusY, statusH;
+  int clockH, imgY, imgH, adY, adH, hdrY, hdrH, dowY, dowH, gridY, rowH, statusY, statusH;
 };
 Geometry pageGeometry;
 Geometry currentGeometry() {
-  return {IMG_H, AD_Y, AD_H, HDR_Y, HDR_H, DOW_Y, DOW_H, GRID_Y, ROW_H, STATUS_Y, STATUS_H};
+  return {CLOCK_H, IMG_Y, IMG_H, AD_Y, AD_H, HDR_Y, HDR_H, DOW_Y, DOW_H, GRID_Y, ROW_H, STATUS_Y, STATUS_H};
 }
 void applyGeometry(const Geometry &g) {
-  IMG_H = g.imgH, AD_Y = g.adY, AD_H = g.adH, HDR_Y = g.hdrY, HDR_H = g.hdrH, DOW_Y = g.dowY, DOW_H = g.dowH;
-  GRID_Y = g.gridY, ROW_H = g.rowH, STATUS_Y = g.statusY, STATUS_H = g.statusH;
+  CLOCK_H = g.clockH, IMG_Y = g.imgY, IMG_H = g.imgH, AD_Y = g.adY, AD_H = g.adH, HDR_Y = g.hdrY, HDR_H = g.hdrH;
+  DOW_Y = g.dowY, DOW_H = g.dowH, GRID_Y = g.gridY, ROW_H = g.rowH, STATUS_Y = g.statusY, STATUS_H = g.statusH;
 }
 // The header is the regular page's (same font and arrows); the extra room goes to the rows.
-//                            img ad    header  weekdays grid     status
-const Geometry BIG_CAL = {0, 0, 0, 0, 24, 24, 18, 42, 40, 282, 38};
+//                       clock img    ad    header  weekdays grid     status
+const Geometry BIG_CAL = {0, 0, 0, 0, 0, 0, 24, 24, 18, 42, 40, 282, 38};
 }  // namespace
 
 namespace {
@@ -54,6 +56,7 @@ const char *MONTHS[] = {"JANUARY", "FEBRUARY", "MARCH",     "APRIL",   "MAY",   
 const char *MON3[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
 int jpgClipBottom = SCREEN_H;
+int artTop = 0;  // screen y where the picture area being drawn starts
 bool jpgStoppedEarly = false;
 
 bool jpgOutput(int16_t x, int16_t y, uint16_t w, uint16_t h, uint16_t *bitmap) {
@@ -93,7 +96,7 @@ bool drawJpeg(const String &path, int offsetY, int clipH) {
   f.close();
   bool ok = false;
   if (got == len && buf[0] == 0xFF && buf[1] == 0xD8) {
-    UI::tft.setViewport(0, 0, SCREEN_W, clipH);
+    UI::tft.setViewport(0, artTop, SCREEN_W, clipH);
     jpgClipBottom = clipH;
     jpgStoppedEarly = false;
     JRESULT r = TJpgDec.drawJpg(0, -offsetY, buf, len);
@@ -109,6 +112,7 @@ bool drawJpeg(const String &path, int offsetY, int clipH) {
 // Retro sunburst with the category and year, for years with no edition.
 void drawSunburst(const SeriesInfo &s, int year, int h) {
   auto &t = UI::tft;
+  t.setViewport(0, artTop, SCREEN_W, h);  // also keeps the long rays inside the picture area
   t.fillRect(0, 0, SCREEN_W, h, PAPER);
   int cx = SCREEN_W / 2, cy = h / 2;
   const float R = 400, STEP = PI / 12;  // 24 rays
@@ -129,12 +133,14 @@ void drawSunburst(const SeriesInfo &s, int year, int h) {
   t.drawNumber(year, cx, cy + 4, 4);
   t.setTextColor(RED_DARK);
   t.drawString("COMING SOON", cx, cy + 26, 1);
+  t.resetViewport();
 }
 
 void drawCaption(const String &caption, int bottom, int font) {
   if (caption.isEmpty()) return;
   auto &t = UI::tft;
   int h = font == 2 ? 18 : 11;
+  bottom += artTop;
   t.fillRect(0, bottom - h, SCREEN_W, h, TFT_BLACK);
   t.setTextDatum(MC_DATUM);
   t.setTextColor(GOLD, TFT_BLACK);
@@ -253,6 +259,7 @@ static void drawPlaceholder(const SeriesInfo &s, int year, int h, const String &
 }
 
 static void drawArt(const SeriesInfo &s, const CalendarMeta *meta, int year, int month, int h, int font) {
+  artTop = h == SCREEN_H ? 0 : IMG_Y;
   // A separate calendar-page header (MM_top.jpg) wins over a window of the full picture.
   if (meta && h != SCREEN_H && drawJpeg(Store::topImagePath(s.id, year, month), max(0, (TOP_H - h) / 2), h)) {
     drawCaption(meta->captions[month - 1], h, font);
@@ -378,8 +385,10 @@ void configureLayout() {
     HDR_H = 24, DOW_H = 12, ROW_H = 17;
   }
   STATUS_H = mottoLine ? 16 : 12;
-  IMG_H = SCREEN_H - AD_H - HDR_H - DOW_H - 6 * ROW_H - STATUS_H;
-  AD_Y = IMG_H;
+  CLOCK_H = 16;
+  IMG_Y = CLOCK_H;
+  IMG_H = SCREEN_H - CLOCK_H - AD_H - HDR_H - DOW_H - 6 * ROW_H - STATUS_H;
+  AD_Y = IMG_Y + IMG_H;
   HDR_Y = AD_Y + AD_H;
   DOW_Y = HDR_Y + HDR_H;
   GRID_Y = DOW_Y + DOW_H;
@@ -438,8 +447,8 @@ void drawCalendarPage(const SeriesInfo &s, const CalendarMeta *meta, int year, i
 
 CalHit hitCalendar(int16_t x, int16_t y, int year, int month, int &day) {
   day = 0;
-  if (y < IMG_H) return HIT_IMAGE;
-  if (y < IMG_H + AD_H) return HIT_AD;
+  if (y < IMG_Y + IMG_H) return HIT_IMAGE;  // includes the clock bar
+  if (y < AD_Y + AD_H) return HIT_AD;
   if (y < HDR_Y + HDR_H + 4) {  // header (a little extra slop below it)
     if (x < 60) return HIT_PREV;
     if (x > SCREEN_W - 60) return HIT_NEXT;
@@ -459,14 +468,29 @@ CalHit hitCalendar(int16_t x, int16_t y, int year, int month, int &day) {
   return HIT_NONE;
 }
 
-// Small clock tab in the picture's top-left corner. Fixed size ("12:59 PM" fits) so a
-// shorter time fully covers a longer one.
-void drawClock(const String &text) {
-  const int W = 52, H = 12;
-  tft.fillRect(0, 0, W, H, TFT_BLACK);
+// White bar across the top of the calendar page: the time on the left, outdoor weather
+// (if any) on the right, in the motto's navy serif italic.
+void drawClockBar(const String &time, bool haveWeather, int tempF, int humidity, float inHg) {
+  if (!CLOCK_H) return;
+  tft.fillRect(0, 0, SCREEN_W, CLOCK_H, TFT_WHITE);
+  tft.setFreeFont(&FreeSerifBoldItalic9pt7b);
+  tft.setTextColor(NAVY);
+  int base = CLOCK_H / 2 + 5;  // digits are 13 px tall, 11 above the baseline: centered
+  tft.setTextDatum(L_BASELINE);
+  tft.drawString(time, 6, base);
+  if (haveWeather) {
+    // "41°  65%  30.07"" right-aligned; the font has no degree sign, so draw one.
+    String rest = String(humidity) + "%  " + String(inHg, 2) + "\"";
+    String temp = String(tempF);
+    int xRest = SCREEN_W - 6 - tft.textWidth(rest);
+    int xDeg = xRest - 12;
+    int xTemp = xDeg - 1 - tft.textWidth(temp);
+    tft.drawString(temp, xTemp, base);
+    tft.drawCircle(xDeg + 2, base - 9, 2, NAVY);
+    tft.drawString(rest, xRest, base);
+  }
+  tft.setTextFont(1);
   tft.setTextDatum(MC_DATUM);
-  tft.setTextColor(TFT_WHITE, TFT_BLACK);
-  tft.drawString(text, W / 2, H / 2 + 1, 1);
 }
 
 // ---------------------------------------------------------------- full-screen calendar

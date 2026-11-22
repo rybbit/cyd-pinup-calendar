@@ -25,6 +25,7 @@
 #include "store.h"
 #include "touch.h"
 #include "ui.h"
+#include "weather.h"
 
 namespace {
 enum Screen { SCR_CAL, SCR_FULL, SCR_BIGCAL, SCR_MENU };
@@ -100,17 +101,20 @@ String clockText() {
   return buf;
 }
 
-// Redraws the clock tab when the minute changes (or force=true after the page redraws).
+// Redraws the clock bar when the minute or the weather changes (or force=true after the
+// page redraws).
 void updateClock(bool force = false) {
   static String shown;
   if (screen != SCR_CAL) {
     shown = "";
     return;
   }
-  String t = clockText();
-  if (t.isEmpty() || (t == shown && !force)) return;
-  shown = t;
-  UI::drawClock(t);
+  const Weather::Now &w = Weather::current();
+  int tempF = (int)lroundf(w.tempF);
+  String key = clockText() + "|" + (w.valid ? String(tempF) + "/" + w.humidity + "/" + String(w.pressureInHg, 2) : "");
+  if (key == shown && !force) return;
+  shown = key;
+  UI::drawClockBar(clockText(), w.valid, tempF, w.humidity, w.pressureInHg);
 }
 
 void showCalendar() {
@@ -282,6 +286,7 @@ void openSetup() {
     tzset();
     UI::configureLayout();
     UI::applyTheme(settings.theme);
+    Weather::invalidate();
     today = getToday();
     bool wifiChanged = settings.ssid != oldSsid || settings.pass != oldPass;
     if (wifiChanged && settings.ssid.length()) {
@@ -537,6 +542,7 @@ void loop() {
   checkDateChange();
   checkForUpdates();
   if (screen == SCR_CAL || screen == SCR_BIGCAL) updateStatus();
+  if (screen == SCR_CAL) Weather::update();
   updateClock();
   delay(10);
 }

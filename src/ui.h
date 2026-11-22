@@ -6,15 +6,13 @@
 
 #include "store.h"
 
-// Calendar page layout (portrait 240x320), chosen at boot by UI::configureLayout():
-//
-//   classic (no ad_ fields)            advertising (ad_ fields in config.txt)
-//   0..169    picture                  0..139    picture
-//                                      140..183  company / addresses / phone
-//   170..193  red header < MONTH >     184..203  red header
-//   194..205  weekday initials         204..213  weekday initials
-//   206..307  6 rows x 17px            214..303  6 rows x 15px
-//   308..319  status line              304..319  motto (holidays when a day is tapped)
+// Calendar page layout (portrait 240x320), sized by UI::configureLayout() from the
+// advertising lines in config.txt. Top to bottom:
+//   clock bar (16 px, white: time + outdoor weather)
+//   picture (whatever height is left: 154 px with no advertising lines)
+//   advertising block (only the lines that are set)
+//   red header < MONTH >, weekday initials, 6 week rows
+//   status line, or the motto
 namespace Layout {
 // menu
 const int MENU_TITLE_H = 28;
@@ -53,8 +51,8 @@ void drawStatus(const String &text);  // with a motto: temporary text in the mot
 void drawMotto();
 CalHit hitCalendar(int16_t x, int16_t y, int year, int month, int &day);
 
-// Time in a small dark tab over the picture's top-left corner (calendar page only).
-void drawClock(const String &text);
+// White bar at the top of the calendar page: time on the left, weather on the right.
+void drawClockBar(const String &time, bool haveWeather, int tempF, int humidity, float inHg);
 
 // --- full-screen calendar (month grid filling the screen) ---
 // While on, drawGrid/drawStatus/hitCalendar use the big geometry. Turn off before

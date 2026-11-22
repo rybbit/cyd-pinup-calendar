@@ -318,10 +318,11 @@ const Field FIELDS[] = {
     {"Motto", &AppSettings::adMotto, TEXT},
     {"Env", &AppSettings::env, ENV},
     {"Theme", &AppSettings::theme, THEME},
+    {"Location", &AppSettings::location, TEXT},
     {"Catalog URL", &AppSettings::catalogUrl, TEXT},
 };
 const int NFIELDS = sizeof(FIELDS) / sizeof(FIELDS[0]);
-const int LIST_Y = 30, LIST_ROW = 23, SAVE_Y = LIST_Y + NFIELDS * LIST_ROW + 4;
+const int LIST_Y = 30, LIST_ROW = 21, SAVE_Y = LIST_Y + NFIELDS * LIST_ROW + 4;
 
 String shownValue(const AppSettings &e, const Field &f) {
   const String &v = e.*(f.member);

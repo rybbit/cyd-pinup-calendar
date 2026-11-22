@@ -5,7 +5,8 @@ You pick a calendar series (Dogs, Guns, Bikinis, and any you add). Each series h
 
 ```
 ┌────────────────────┐
-│3:47 PM             │  time (small tab, top-left) · picture for the month (240x170 window
+│3:47 PM  41° 65% 30.07"│  clock bar: time + outdoor weather
+│                    │  picture for the month (240x170 window
 │     pin-up art     │  of a 240x320 image, tap for full screen)
 │   Miss November    │
 ├────────────────────┤
@@ -101,6 +102,8 @@ You need a FAT32 microSD card. Calendars are stored in `/calendar/<calendar-id>/
 
    **`theme`** (optional, `red`, `blue` or `green`; default red) colors the month bar, Sunday numbers, holiday fills and buttons. Observance dots use a contrasting color: blue in the Red and Green themes, red in the Blue theme.
 
+   **`location`** (optional) turns on outdoor weather in the clock bar at the top of the calendar page: temperature (°F), humidity and sea-level pressure (inches of mercury) from [Open-Meteo](https://open-meteo.com) (free, no account). Use a US ZIP code (`location=55401`), a place name, or `lat,lon`. Readings refresh every 15 minutes; without a location the bar shows only the time.
+
    **Big calendar.** Tapping the month name shows the month filling the whole screen, with large numbers and the holidays cycling along the bottom. ◀ ▶ change month and tapping a day shows its holidays. Tap the month name or the bottom line to go back.
 
    **Editing on the device** (env=dev). Open the picker (long-press the month name or the advertising block) and tap **SETUP**. Every value is listed; tap one to change it:
@@ -108,6 +111,7 @@ You need a FAT32 microSD card. Calendars are stored in `/calendar/<calendar-id>/
    - **Time zone:** pick a US zone, or **CUSTOM** for a POSIX string.
    - **Env:** choose dev or prod.
    - **Theme:** choose Red, Blue or Green.
+   - **Location:** a ZIP code for the weather.
    - **Everything else:** an on-screen keyboard (ABC for capitals, #+= for symbols).
 
    **SAVE** rewrites `config.txt` in place, keeping your key spellings, comments and unknown lines, and applies the changes immediately: Wi-Fi reconnects, the clock's time zone updates, and the advertising layout redraws.
@@ -218,6 +222,7 @@ g++ -std=c++11 -I src test/host/test_holidays.cpp src/holidays.cpp -o /tmp/th &&
 | `src/store.cpp` | series/edition catalog, SD layout, custom calendars, incremental downloads |
 | `src/net.cpp` | Wi-Fi, NTP, HTTPS → SD download |
 | `src/settings.cpp` | `/calendar/config.txt` read/write + selected calendar (NVS) |
+| `src/weather.cpp` | Open-Meteo lookup (ZIP to lat/lon) and current conditions |
 | `src/setup_ui.cpp` | on-device settings editor: list, keyboard, Wi-Fi scan, time zones |
 | `src/touch.cpp` | bit-banged XPT2046 + 3-point calibration (saved in NVS) |
 | `src/holidays.cpp` | US holiday engine (pure C++) |

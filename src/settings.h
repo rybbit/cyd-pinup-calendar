@@ -16,6 +16,7 @@
 //         motto=Everything For Welding
 //         env=dev                               (optional: dev or prod, default prod)
 //         theme=blue                            (optional: red, blue or green, default red)
+//         location=55401                        (optional: ZIP, place or lat,lon for weather)
 //     Blank lines and lines starting with # are ignored.
 //   * NVS (flash): the currently selected calendar.
 //
@@ -29,6 +30,7 @@ struct AppSettings {
   String tz;          // POSIX TZ string, from config.txt or TZ_DEFAULT
   String env;         // "dev" or "prod" ("" = prod)
   String theme;       // "red" (default), "blue" or "green"
+  String location;    // weather location: US ZIP code, place name, or "lat,lon" ("" = no weather)
   bool confFound = false;
   // Raw values from config.txt (what the SETUP screen edits)
   String adCompany, adAddress1, adAddress2, adContact, adMotto;
