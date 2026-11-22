@@ -22,6 +22,9 @@ int GRID_Y = 206, ROW_H = 17;
 int STATUS_Y = 308, STATUS_H = 12;
 int COMPANY_CY = 0, ADDR_CY = 0, CONTACT_CY = 0;  // ad line centers, relative to AD_Y
 bool mottoLine = false;
+// Font the motto fits in (configureLayout); the clock bar uses the same one so they match.
+const GFXfont *MOTTO_FF = nullptr;  // a free font, or nullptr for built-in font MOTTO_FONT
+int MOTTO_FONT = 2;
 const int CLASSIC_IMG_H = 170;  // crop_y values in calendar.json are tuned for this window
 
 // Full-screen calendar: the same drawing code with this geometry swapped in.
@@ -362,8 +365,15 @@ void drawGrid(int year, int month, const DateYMD &today, int selDay) {
 
 // Builds the page from whichever ad_ fields are set: each line reserves space only
 // when it has text, and the picture takes whatever height is left.
+static void pickMottoFont();
+
 void configureLayout() {
   setBigCalendar(false);
+  pickMottoFont();
+  Serial.printf("Motto/clock font: %s\n", MOTTO_FF == &FreeSerifBoldItalic9pt7b ? "serif bold italic"
+                                          : MOTTO_FF == &FreeSerifItalic9pt7b    ? "serif italic"
+                                          : MOTTO_FONT == 2                      ? "built-in 2"
+                                                                                 : "built-in 1");
   bool company = settings.showCompany.length();
   bool addr = settings.showAddress1.length() || settings.showAddress2.length();
   bool contact = settings.showContact.length();
@@ -415,11 +425,51 @@ static void drawAd() {
   if (settings.showContact.length()) drawFitted(settings.showContact, SCREEN_W / 2, AD_Y + CONTACT_CY, nullptr);
 }
 
+// Baseline that vertically centers digits/capitals of free font `ff` on cy.
+static int centeredBaseline(const GFXfont *ff, int cy) {
+  const GFXglyph &g = ff->glyph['0' - ff->first];
+  return cy - g.yOffset - g.height / 2;
+}
+
+// Draws text in the motto's font: left/center/right aligned (datum: 0/1/2) on line cy.
+static void drawInMottoFont(const String &text, int x, int cy, int align) {
+  if (MOTTO_FF) {
+    tft.setFreeFont(MOTTO_FF);
+    tft.setTextDatum(align == 0 ? L_BASELINE : align == 1 ? C_BASELINE : R_BASELINE);
+    tft.drawString(text, x, centeredBaseline(MOTTO_FF, cy));
+    tft.setTextFont(1);
+  } else {
+    tft.setTextDatum(align == 0 ? ML_DATUM : align == 1 ? MC_DATUM : MR_DATUM);
+    tft.drawString(text, x, cy + 1, MOTTO_FONT);
+  }
+  tft.setTextDatum(MC_DATUM);
+}
+
+static int mottoFontWidth(const String &text) {
+  if (!MOTTO_FF) return tft.textWidth(text, MOTTO_FONT);
+  tft.setFreeFont(MOTTO_FF);
+  int w = tft.textWidth(text);
+  tft.setTextFont(1);
+  return w;
+}
+
+// Picks the motto font: bold serif italic, then regular serif italic, then built-in fonts.
+static void pickMottoFont() {
+  const String &m = settings.adMotto;
+  const int maxW = SCREEN_W - 4;
+  MOTTO_FF = &FreeSerifBoldItalic9pt7b;
+  if (m.isEmpty() || mottoFontWidth(m) <= maxW) return;
+  MOTTO_FF = &FreeSerifItalic9pt7b;
+  if (mottoFontWidth(m) <= maxW) return;
+  MOTTO_FF = nullptr;
+  MOTTO_FONT = tft.textWidth(m, 2) <= maxW ? 2 : 1;
+}
+
 void drawMotto() {
   tft.fillRect(0, STATUS_Y, SCREEN_W, STATUS_H, PAPER);
   if (settings.adMotto.isEmpty()) return;
   tft.setTextColor(NAVY);
-  drawFitted(settings.adMotto, SCREEN_W / 2, STATUS_Y + STATUS_H / 2 - 1, &FreeSerifBoldItalic9pt7b);
+  drawInMottoFont(settings.adMotto, SCREEN_W / 2, STATUS_Y + STATUS_H / 2, 1);
 }
 
 void drawStatus(const String &text) {
@@ -472,25 +522,22 @@ CalHit hitCalendar(int16_t x, int16_t y, int year, int month, int &day) {
 // (if any) on the right, in the motto's navy serif italic.
 void drawClockBar(const String &time, bool haveWeather, int tempF, int humidity, float inHg) {
   if (!CLOCK_H) return;
+  int cy = CLOCK_H / 2;
   tft.fillRect(0, 0, SCREEN_W, CLOCK_H, TFT_WHITE);
-  tft.setFreeFont(&FreeSerifBoldItalic9pt7b);
   tft.setTextColor(NAVY);
-  int base = CLOCK_H / 2 + 5;  // digits are 13 px tall, 11 above the baseline: centered
-  tft.setTextDatum(L_BASELINE);
-  tft.drawString(time, 6, base);
+  drawInMottoFont(time, 6, cy, 0);
   if (haveWeather) {
-    // "41°  65%  30.07"" right-aligned; the font has no degree sign, so draw one.
+    // "47°  82%  29.85"" right-aligned; the fonts have no degree sign, so draw one.
     String rest = String(humidity) + "%  " + String(inHg, 2) + "\"";
     String temp = String(tempF);
-    int xRest = SCREEN_W - 6 - tft.textWidth(rest);
+    int xRest = SCREEN_W - 6 - mottoFontWidth(rest);
     int xDeg = xRest - 12;
-    int xTemp = xDeg - 1 - tft.textWidth(temp);
-    tft.drawString(temp, xTemp, base);
-    tft.drawCircle(xDeg + 2, base - 9, 2, NAVY);
-    tft.drawString(rest, xRest, base);
+    drawInMottoFont(temp, xDeg - 1, cy, 2);
+    int degY = MOTTO_FF ? centeredBaseline(MOTTO_FF, cy) + MOTTO_FF->glyph['0' - MOTTO_FF->first].yOffset + 2
+                        : cy - 4;  // top of the digits
+    tft.drawCircle(xDeg + 2, degY, 2, NAVY);
+    drawInMottoFont(rest, xRest, cy, 0);
   }
-  tft.setTextFont(1);
-  tft.setTextDatum(MC_DATUM);
 }
 
 // ---------------------------------------------------------------- full-screen calendar
