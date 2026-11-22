@@ -152,24 +152,40 @@ void drawCaption(const String &caption, int bottom, int font) {
 
 int colX(int col) { return col * SCREEN_W / 7; }
 
-// Two-line labels (max 5 characters per line) for the big calendar's day boxes.
+// Labels for the big calendar's day boxes, in the 3x5 TomThumb font: up to 3 lines of
+// about 8 characters (31 px). The full name shows on the bottom line when the day is tapped.
 const char *shortHolidayName(const char *name) {
   static const char *const MAP[][2] = {
-      {"New Year's Day", "New\nYear"},         {"New Year's (observed)", "New\nYear"},
-      {"Martin Luther King Jr. Day", "MLK\nDay"}, {"Presidents' Day", "Pres.\nDay"},
-      {"Memorial Day", "Mem.\nDay"},           {"Juneteenth", "June\nteen"},
-      {"Juneteenth (observed)", "June\nteen"}, {"Independence Day", "July\n4th"},
-      {"Independence Day (observed)", "July\n4th"}, {"Labor Day", "Labor\nDay"},
-      {"Columbus Day", "Colum\nbus"},          {"Veterans Day", "Vets\nDay"},
-      {"Veterans Day (observed)", "Vets\nDay"}, {"Thanksgiving", "Thnks\ngivng"},
-      {"Christmas Day", "Xmas"},                {"Christmas (observed)", "Xmas"},
-      {"Groundhog Day", "Grnd-\nhog"},         {"Valentine's Day", "Valen\ntine"},
-      {"Daylight Saving Time begins", "DST\n+1 hr"}, {"Daylight Saving Time ends", "DST\n-1 hr"},
-      {"St. Patrick's Day", "St.\nPat's"},     {"Easter Sunday", "Eas-\nter"},
-      {"Tax Day", "Tax\nDay"},                 {"Mother's Day", "Mom's\nDay"},
-      {"Flag Day", "Flag\nDay"},               {"Father's Day", "Dad's\nDay"},
-      {"Halloween", "Hallo\nween"},            {"Election Day", "Elec.\nDay"},
-      {"Christmas Eve", "Xmas\nEve"},          {"New Year's Eve", "NYE"},
+      {"New Year's Day", "New\nYear's\nDay"},
+      {"New Year's (observed)", "New\nYear's\n(obs.)"},
+      {"Martin Luther King Jr. Day", "MLK Jr.\nDay"},
+      {"Presidents' Day", "Presi-\ndents'\nDay"},
+      {"Memorial Day", "Memorial\nDay"},
+      {"Juneteenth", "June-\nteenth"},
+      {"Juneteenth (observed)", "June-\nteenth\n(obs.)"},
+      {"Independence Day", "Indepen-\ndence\nDay"},
+      {"Independence Day (observed)", "Indepen-\ndence\n(obs.)"},
+      {"Labor Day", "Labor\nDay"},
+      {"Columbus Day", "Columbus\nDay"},
+      {"Veterans Day", "Veterans\nDay"},
+      {"Veterans Day (observed)", "Veterans\nDay\n(obs.)"},
+      {"Thanksgiving", "Thanks-\ngiving"},
+      {"Christmas Day", "Christ-\nmas"},
+      {"Christmas (observed)", "Christ-\nmas\n(obs.)"},
+      {"Groundhog Day", "Ground-\nhog Day"},
+      {"Valentine's Day", "Valen-\ntine's\nDay"},
+      {"Daylight Saving Time begins", "DST\nbegins"},
+      {"Daylight Saving Time ends", "DST\nends"},
+      {"St. Patrick's Day", "St.\nPatrick's\nDay"},
+      {"Easter Sunday", "Easter"},
+      {"Tax Day", "Tax\nDay"},
+      {"Mother's Day", "Mother's\nDay"},
+      {"Flag Day", "Flag\nDay"},
+      {"Father's Day", "Father's\nDay"},
+      {"Halloween", "Hallo-\nween"},
+      {"Election Day", "Election\nDay"},
+      {"Christmas Eve", "Christ-\nmas Eve"},
+      {"New Year's Eve", "New\nYear's\nEve"},
   };
   for (auto &m : MAP)
     if (strcmp(m[0], name) == 0) return m[1];
@@ -353,12 +369,21 @@ void drawGrid(int year, int month, const DateYMD &today, int selDay) {
     if (bigCal) {  // like a printed wall calendar: small number in the top-left of a big box
       tft.setTextDatum(TL_DATUM);
       tft.drawNumber(d, x + 4, y + 3, 2);
-      if (label) {  // holiday name in two short lines under the number
+      if (label) {  // holiday name, up to 3 tiny lines under the number
         String l = shortHolidayName(label);
-        int nl = l.indexOf('\n');
+        tft.setFreeFont(&TomThumb);
+        tft.setTextDatum(L_BASELINE);
         tft.setTextColor(filled ? PAPER : dayOff ? RED : BLUE);
-        tft.drawString(nl < 0 ? l : l.substring(0, nl), x + 3, y + 21, 1);
-        if (nl >= 0) tft.drawString(l.substring(nl + 1), x + 3, y + 30, 1);
+        int line = 0, start = 0;
+        while (start <= (int)l.length() && line < 3) {
+          int nl = l.indexOf('\n', start);
+          if (nl < 0) nl = l.length();
+          tft.drawString(l.substring(start, nl), x + 2, y + 24 + 6 * line);
+          start = nl + 1;
+          line++;
+        }
+        tft.setTextFont(1);
+        tft.setTextDatum(TL_DATUM);
       }
       tft.setTextDatum(MC_DATUM);
     } else {
