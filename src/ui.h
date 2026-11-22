@@ -53,6 +53,9 @@ void drawStatus(const String &text);  // with a motto: temporary text in the mot
 void drawMotto();
 CalHit hitCalendar(int16_t x, int16_t y, int year, int month, int &day);
 
+// Time in a small dark tab over the picture's top-left corner (calendar page only).
+void drawClock(const String &text);
+
 // --- full-screen calendar (month grid filling the screen) ---
 // While on, drawGrid/drawStatus/hitCalendar use the big geometry. Turn off before
 // drawing the regular calendar page again.

@@ -459,6 +459,16 @@ CalHit hitCalendar(int16_t x, int16_t y, int year, int month, int &day) {
   return HIT_NONE;
 }
 
+// Small clock tab in the picture's top-left corner. Fixed size ("12:59 PM" fits) so a
+// shorter time fully covers a longer one.
+void drawClock(const String &text) {
+  const int W = 52, H = 12;
+  tft.fillRect(0, 0, W, H, TFT_BLACK);
+  tft.setTextDatum(MC_DATUM);
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  tft.drawString(text, W / 2, H / 2 + 1, 1);
+}
+
 // ---------------------------------------------------------------- full-screen calendar
 
 void setBigCalendar(bool on) {

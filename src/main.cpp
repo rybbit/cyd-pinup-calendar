@@ -89,10 +89,35 @@ void resetStatus() {
   lastStatus = "\x01";  // force redraw
 }
 
+String clockText() {
+  if (!Net::timeValid()) return "";
+  time_t now = time(nullptr);
+  struct tm tm;
+  localtime_r(&now, &tm);
+  int h = tm.tm_hour % 12;
+  char buf[12];
+  snprintf(buf, sizeof(buf), "%d:%02d %s", h ? h : 12, tm.tm_min, tm.tm_hour < 12 ? "AM" : "PM");
+  return buf;
+}
+
+// Redraws the clock tab when the minute changes (or force=true after the page redraws).
+void updateClock(bool force = false) {
+  static String shown;
+  if (screen != SCR_CAL) {
+    shown = "";
+    return;
+  }
+  String t = clockText();
+  if (t.isEmpty() || (t == shown && !force)) return;
+  shown = t;
+  UI::drawClock(t);
+}
+
 void showCalendar() {
   screen = SCR_CAL;
   UI::drawCalendarPage(series, currentMeta(), viewY, viewM, today, selDay);
   resetStatus();
+  updateClock(true);
 }
 
 // The month grid filling the whole screen.
@@ -512,5 +537,6 @@ void loop() {
   checkDateChange();
   checkForUpdates();
   if (screen == SCR_CAL || screen == SCR_BIGCAL) updateStatus();
+  updateClock();
   delay(10);
 }

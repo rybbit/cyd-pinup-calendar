@@ -5,7 +5,7 @@ You pick a calendar series (Dogs, Guns, Bikinis, and any you add). Each series h
 
 ```
 ┌────────────────────┐
-│                    │  picture for the month (240x170 window
+│3:47 PM             │  time (small tab, top-left) · picture for the month (240x170 window
 │     pin-up art     │  of a 240x320 image, tap for full screen)
 │   Miss November    │
 ├────────────────────┤
