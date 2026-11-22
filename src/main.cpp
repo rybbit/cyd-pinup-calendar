@@ -110,11 +110,17 @@ void updateClock(bool force = false) {
     return;
   }
   const Weather::Now &w = Weather::current();
-  int tempF = (int)lroundf(w.tempF);
-  String key = clockText() + "|" + (w.valid ? String(tempF) + "/" + w.humidity + "/" + String(w.pressureInHg, 2) : "");
+  String temp, rest;
+  if (w.valid) {
+    bool metric = settings.isMetric();
+    temp = String((int)lroundf(metric ? w.tempC : w.tempF));
+    rest = String(w.humidity) + "%  " +
+           (metric ? String((int)lroundf(w.pressureHpa)) + " hPa" : String(w.pressureInHg, 2) + "\"");
+  }
+  String key = clockText() + "|" + temp + "|" + rest;
   if (key == shown && !force) return;
   shown = key;
-  UI::drawClockBar(clockText(), w.valid, tempF, w.humidity, w.pressureInHg);
+  UI::drawClockBar(clockText(), temp, rest);
 }
 
 void showCalendar() {
@@ -331,7 +337,6 @@ void handleMenuTap(int16_t x, int16_t y) {
       break;
     case UI::MHIT_SYNC:
       if (Net::online()) {
-        Serial.println("SYNC tapped");
         UI::drawMessage("SYNC", "Fetching calendar list...");
         if (!Store::refreshCatalog()) {
           UI::drawMessage("SYNC FAILED", "Could not download", "catalog.json", "Check catalog= in config.txt");

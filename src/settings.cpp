@@ -12,12 +12,12 @@ AppSettings settings;
 namespace {
 // Canonical config.txt keys, in the order new keys are appended when saving.
 const char *const KEYS[] = {"ssid",     "pass",     "tz",      "catalog", "organization",
-                            "address1", "address2", "contact", "motto",   "env", "theme", "location"};
+                            "address1", "address2", "contact", "motto",   "env", "theme", "location", "units"};
 const int NKEYS = sizeof(KEYS) / sizeof(KEYS[0]);
 
 String *member(AppSettings &s, int i) {
   String *m[] = {&s.ssid,       &s.pass,       &s.tz,        &s.catalogUrl, &s.adCompany,
-                 &s.adAddress1, &s.adAddress2, &s.adContact, &s.adMotto,    &s.env, &s.theme, &s.location};
+                 &s.adAddress1, &s.adAddress2, &s.adContact, &s.adMotto,    &s.env, &s.theme, &s.location, &s.units};
   return m[i];
 }
 }  // namespace
@@ -61,7 +61,7 @@ void AppSettings::computeDisplay() {
 }
 
 bool AppSettings::loadConfig() {
-  ssid = pass = env = theme = location = "";
+  ssid = pass = env = theme = location = units = "";
   catalogUrl = CATALOG_URL_DEFAULT;
   tz = TZ_DEFAULT;
   adCompany = adAddress1 = adAddress2 = adContact = adMotto = "";

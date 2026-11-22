@@ -15,8 +15,9 @@
 //                                               may be a phone, email, website...)
 //         motto=Everything For Welding
 //         env=dev                               (optional: dev or prod, default prod)
-//         theme=blue                            (optional: red, blue or green, default red)
+//         theme=blue                            (optional: red, blue, green or black; default red)
 //         location=55401                        (optional: ZIP, place or lat,lon for weather)
+//         units=metric                          (optional: imperial (F, inHg) or metric (C, hPa))
 //     Blank lines and lines starting with # are ignored.
 //   * NVS (flash): the currently selected calendar.
 //
@@ -30,6 +31,7 @@ struct AppSettings {
   String tz;          // POSIX TZ string, from config.txt or TZ_DEFAULT
   String env;         // "dev" or "prod" ("" = prod)
   String theme;       // "red" (default), "blue" or "green"
+  String units;       // "imperial" (default: F, inHg) or "metric" (C, hPa)
   String location;    // weather location: US ZIP code, place name, or "lat,lon" ("" = no weather)
   bool confFound = false;
   // Raw values from config.txt (what the SETUP screen edits)
@@ -38,6 +40,7 @@ struct AppSettings {
   String showCompany, showAddress1, showAddress2, showContact;
 
   bool isDev() const { return env.equalsIgnoreCase("dev"); }
+  bool isMetric() const { return units.equalsIgnoreCase("metric"); }
   bool hasAd() const {
     return showCompany.length() || showAddress1.length() || showAddress2.length() || showContact.length() ||
            adMotto.length();

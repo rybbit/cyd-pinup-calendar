@@ -6,9 +6,9 @@
 namespace Weather {
 struct Now {
   bool valid = false;
-  float tempF = 0;
-  int humidity = 0;      // %
-  float pressureInHg = 0;  // sea-level pressure
+  float tempC = 0, tempF = 0;
+  int humidity = 0;                     // %
+  float pressureHpa = 0, pressureInHg = 0;  // sea-level pressure
   uint32_t at = 0;       // millis() of the reading
 };
 // Call often (from loop): fetches when online and due (every 15 min; retries failures

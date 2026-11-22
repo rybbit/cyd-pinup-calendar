@@ -96,7 +96,6 @@ long download(const String &url, const String &path) {
   }
   if (SD.exists(path)) SD.remove(path);
   if (!SD.rename(tmp, path)) return -1;
-  Serial.printf("  got %s (%d bytes)\n", path.c_str(), written);
   return written;
 }
 

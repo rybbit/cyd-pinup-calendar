@@ -212,6 +212,10 @@ void applyTheme(const String &name) {
     RED = tft.color565(44, 92, 186);
     RED_DARK = tft.color565(24, 56, 128);
     BLUE = tft.color565(196, 32, 38);
+  } else if (t == "black") {
+    RED = tft.color565(28, 28, 28);
+    RED_DARK = TFT_BLACK;
+    BLUE = tft.color565(196, 32, 38);
   } else if (t == "green") {
     RED = tft.color565(36, 122, 64);
     RED_DARK = tft.color565(20, 80, 40);
@@ -465,7 +469,7 @@ static void pickMottoFont() {
 void drawMotto() {
   tft.fillRect(0, STATUS_Y, SCREEN_W, STATUS_H, PAPER);
   if (settings.adMotto.isEmpty()) return;
-  tft.setTextColor(NAVY);
+  tft.setTextColor(TFT_BLACK);
   drawInMottoFont(settings.adMotto, SCREEN_W / 2, STATUS_Y + STATUS_H / 2, 1);
 }
 
@@ -546,7 +550,7 @@ static void drawMoon(int cx, int cy, int r, float phase, uint16_t lit, uint16_t 
   tft.drawCircle(cx, cy, r, TFT_BLACK);
 }
 
-void drawClockBar(const String &time, bool haveWeather, int tempF, int humidity, float inHg) {
+void drawClockBar(const String &time, const String &temp, const String &rest) {
   if (!CLOCK_H) return;
   int cy = CLOCK_H / 2;
   tft.fillRect(0, 0, SCREEN_W, CLOCK_H, TFT_WHITE);
@@ -556,10 +560,8 @@ void drawClockBar(const String &time, bool haveWeather, int tempF, int humidity,
     int x = 6 + mottoFontWidth(time) + 12;
     drawMoon(x, cy, 6, moonPhase(::time(nullptr)), tft.color565(255, 224, 120), tft.color565(110, 110, 110));
   }
-  if (haveWeather) {
+  if (temp.length()) {
     // "47°  82%  29.85"" right-aligned; the fonts have no degree sign, so draw one.
-    String rest = String(humidity) + "%  " + String(inHg, 2) + "\"";
-    String temp = String(tempF);
     int xRest = SCREEN_W - 6 - mottoFontWidth(rest);
     int xDeg = xRest - 12;
     drawInMottoFont(temp, xDeg - 1, cy, 2);

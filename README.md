@@ -98,11 +98,11 @@ You need a FAT32 microSD card. Calendars are stored in `/calendar/<calendar-id>/
 
    A prod board has no way into the picker or SETUP, which suits a gift or a unit that shouldn't be changed. To change one, set `env=dev` in `config.txt` on the card.
 
-   With `env=dev`, if organization, address1, address2 and contact are all blank, the block shows the project name `cyd-pinup-calendar` (in the large organization font) and the developer contact instead. These are set by `DEV_ORGANIZATION` / `DEV_CONTACT` in `platformio.ini`. With `env=prod`, an all-blank block takes no space.
+   With `env=dev`, if organization, address1, address2 and contact are all blank, the block shows the project name `cyd-pinup-calendar` (in the large organization font) and the developer contact instead. `DEV_ORGANIZATION` is set in `platformio.ini`. `DEV_CONTACT` is personal, so it goes in `src/private_config.h`, which git ignores: `#define DEV_CONTACT "you@example.com"`. Without it, no contact is shown. With `env=prod`, an all-blank block takes no space.
 
-   **`theme`** (optional, `red`, `blue` or `green`; default red) colors the month bar, Sunday numbers, holiday fills and buttons. Observance dots use a contrasting color: blue in the Red and Green themes, red in the Blue theme.
+   **`theme`** (optional, `red`, `blue`, `green` or `black`; default red) colors the month bar, Sunday numbers, holiday fills and buttons. Observance dots use a contrasting color: blue in the Red and Green themes, red in the Blue and Black themes.
 
-   **`location`** (optional) turns on outdoor weather in the clock bar at the top of the calendar page: temperature (°F), humidity and sea-level pressure (inches of mercury) from [Open-Meteo](https://open-meteo.com) (free, no account). Use a US ZIP code (`location=55401`), a place name, or `lat,lon`. Readings refresh every 15 minutes; without a location the bar shows only the time.
+   **`location`** (optional) turns on outdoor weather in the clock bar at the top of the calendar page: temperature (°F), humidity and sea-level pressure (inches of mercury) from [Open-Meteo](https://open-meteo.com) (free, no account). Use a US ZIP code (`location=55401`), a place name, or `lat,lon`. Readings refresh every 15 minutes; without a location the bar shows only the time. **`units`** picks `imperial` (°F, inches of mercury; the default) or `metric` (°C, hPa).
 
    **Big calendar.** Tapping the month name shows the month filling the whole screen, with large numbers and the holidays cycling along the bottom. ◀ ▶ change month and tapping a day shows its holidays. Tap the month name or the bottom line to go back.
 
@@ -110,8 +110,11 @@ You need a FAT32 microSD card. Calendars are stored in `/calendar/<calendar-id>/
    - **Wi-Fi:** scans nearby networks, then asks for the password. **TYPE NAME** handles hidden networks.
    - **Time zone:** pick a US zone, or **CUSTOM** for a POSIX string.
    - **Env:** choose dev or prod.
-   - **Theme:** choose Red, Blue or Green.
+   - **Theme:** choose Red, Blue, Green or Black.
    - **Location:** a ZIP code for the weather.
+   - **Units:** Imperial or Metric.
+
+   The list spans two pages; **MORE** switches between them.
    - **Everything else:** an on-screen keyboard (ABC for capitals, #+= for symbols).
 
    **SAVE** rewrites `config.txt` in place, keeping your key spellings, comments and unknown lines, and applies the changes immediately: Wi-Fi reconnects, the clock's time zone updates, and the advertising layout redraws.

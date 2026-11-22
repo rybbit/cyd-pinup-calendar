@@ -234,12 +234,18 @@ void editZone(AppSettings &e) {
 }
 
 void editTheme(AppSettings &e) {
-  static const char *const THEMES[] = {"red", "blue", "green"};
+  static const char *const THEMES[] = {"red", "blue", "green", "black"};
   int cur = 0;
-  for (int i = 0; i < 3; i++)
+  for (int i = 0; i < 4; i++)
     if (e.theme.equalsIgnoreCase(THEMES[i])) cur = i;
-  int r = choose("COLOR THEME", {"Red", "Blue", "Green"}, cur);
+  int r = choose("COLOR THEME", {"Red", "Blue", "Green", "Black"}, cur);
   if (r >= 0) e.theme = THEMES[r];
+}
+
+void editUnits(AppSettings &e) {
+  int r = choose("UNITS", {"Imperial  (F, inHg)", "Metric  (C, hPa)"}, e.isMetric() ? 1 : 0);
+  if (r == 0) e.units = "imperial";
+  if (r == 1) e.units = "metric";
 }
 
 void editEnv(AppSettings &e) {
@@ -301,7 +307,7 @@ void editWifi(AppSettings &e) {
 
 // ---------------------------------------------------------------- settings list
 
-enum Kind { TEXT, SECRET, WIFI, ZONE, ENV, THEME };
+enum Kind { TEXT, SECRET, WIFI, ZONE, ENV, THEME, UNITS };
 struct Field {
   const char *label;
   String AppSettings::*member;
@@ -319,10 +325,13 @@ const Field FIELDS[] = {
     {"Env", &AppSettings::env, ENV},
     {"Theme", &AppSettings::theme, THEME},
     {"Location", &AppSettings::location, TEXT},
+    {"Units", &AppSettings::units, UNITS},
     {"Catalog URL", &AppSettings::catalogUrl, TEXT},
 };
 const int NFIELDS = sizeof(FIELDS) / sizeof(FIELDS[0]);
-const int LIST_Y = 30, LIST_ROW = 21, SAVE_Y = LIST_Y + NFIELDS * LIST_ROW + 4;
+// Two pages of up to PER_PAGE fields; MORE switches pages.
+const int PER_PAGE = 10, NPAGES = (NFIELDS + PER_PAGE - 1) / PER_PAGE;
+const int LIST_Y = 30, LIST_ROW = 25, SAVE_Y = LIST_Y + PER_PAGE * LIST_ROW + 4;
 
 String shownValue(const AppSettings &e, const Field &f) {
   const String &v = e.*(f.member);
@@ -330,6 +339,7 @@ String shownValue(const AppSettings &e, const Field &f) {
     case SECRET: return v.isEmpty() ? "" : String("********");
     case ZONE: return zoneName(v);
     case ENV: return v.isEmpty() ? "prod (default)" : v;
+    case UNITS: return v.equalsIgnoreCase("metric") ? "Metric (C, hPa)" : "Imperial (F, inHg)";
     case THEME: {
       String t = v.isEmpty() ? String("red") : v;
       t.toLowerCase();
@@ -340,11 +350,14 @@ String shownValue(const AppSettings &e, const Field &f) {
   }
 }
 
-void drawList(const AppSettings &e, bool dirty) {
+void drawList(const AppSettings &e, bool dirty, int page) {
   tft.fillScreen(PAPER);
-  titleBar(dirty ? "SETTINGS *" : "SETTINGS");
-  for (int i = 0; i < NFIELDS; i++) {
-    int y = LIST_Y + i * LIST_ROW;
+  String title = dirty ? "SETTINGS *" : "SETTINGS";
+  if (NPAGES > 1) title += "  " + String(page + 1) + "/" + NPAGES;
+  titleBar(title);
+  for (int r = 0; r < PER_PAGE && page * PER_PAGE + r < NFIELDS; r++) {
+    int i = page * PER_PAGE + r;
+    int y = LIST_Y + r * LIST_ROW;
     tft.drawFastHLine(0, y + LIST_ROW - 1, SCREEN_W, GRID);
     tft.setTextDatum(ML_DATUM);
     tft.setTextColor(RED_DARK);
@@ -354,8 +367,10 @@ void drawList(const AppSettings &e, bool dirty) {
     tft.drawString(fit(v.isEmpty() ? "(not set)" : v, SCREEN_W - 84, 2), 80, y + LIST_ROW / 2, 2);
   }
   tft.fillRect(0, SAVE_Y, SCREEN_W, SCREEN_H - SAVE_Y, PAPER_DARK);
-  button(0, SAVE_Y, SCREEN_W / 2, SCREEN_H - SAVE_Y, "CANCEL", RED_DARK);
-  button(SCREEN_W / 2, SAVE_Y, SCREEN_W / 2, SCREEN_H - SAVE_Y, "SAVE", RED);
+  int bw = SCREEN_W / 3, bh = SCREEN_H - SAVE_Y;
+  button(0, SAVE_Y, bw, bh, "CANCEL", RED_DARK);
+  button(bw, SAVE_Y, bw, bh, "MORE", RED_DARK);
+  button(2 * bw, SAVE_Y, SCREEN_W - 2 * bw, bh, "SAVE", RED);
 }
 
 bool sameSettings(const AppSettings &a, const AppSettings &b) {
@@ -370,12 +385,18 @@ namespace Setup {
 bool run() {
   initColors();
   AppSettings e = settings;
+  int page = 0;
   while (true) {
-    drawList(e, !sameSettings(e, settings));
+    drawList(e, !sameSettings(e, settings), page);
     int16_t x, y;
     waitTap(x, y);
     if (y >= SAVE_Y) {
-      if (x < SCREEN_W / 2) return false;  // CANCEL
+      int b = x * 3 / SCREEN_W;
+      if (b == 0) return false;  // CANCEL
+      if (b == 1) {              // MORE
+        page = (page + 1) % NPAGES;
+        continue;
+      }
       UI::drawMessage("SETTINGS", "Saving " CONFIG_PATH "...");
       if (!e.saveConfig()) {
         UI::drawMessage("SAVE FAILED", "Could not write", CONFIG_PATH, "Is the SD card OK?");
@@ -386,14 +407,16 @@ bool run() {
       return true;
     }
     if (y < LIST_Y) continue;
-    int i = (y - LIST_Y) / LIST_ROW;
-    if (i >= NFIELDS) continue;
+    int r = (y - LIST_Y) / LIST_ROW;
+    int i = page * PER_PAGE + r;
+    if (r >= PER_PAGE || i >= NFIELDS) continue;
     const Field &f = FIELDS[i];
     switch (f.kind) {
       case WIFI: editWifi(e); break;
       case ZONE: editZone(e); break;
       case ENV: editEnv(e); break;
       case THEME: editTheme(e); break;
+      case UNITS: editUnits(e); break;
       default: {
         String v = e.*(f.member);
         if (editText(f.label, v, f.kind == SECRET ? 64 : 120)) e.*(f.member) = v;

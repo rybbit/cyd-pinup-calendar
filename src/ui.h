@@ -29,7 +29,7 @@ namespace UI {
 extern TFT_eSPI tft;
 
 void begin();
-// Color theme: "red" (default), "blue" or "green".
+// Color theme: "red" (default), "blue", "green" or "black".
 void applyTheme(const String &name);
 uint16_t accentColor();
 uint16_t accentDarkColor();
@@ -52,7 +52,8 @@ void drawMotto();
 CalHit hitCalendar(int16_t x, int16_t y, int year, int month, int &day);
 
 // White bar at the top of the calendar page: time on the left, weather on the right.
-void drawClockBar(const String &time, bool haveWeather, int tempF, int humidity, float inHg);
+// temp: "47" (a degree sign is drawn after it); rest: "82%  29.85"". Empty temp = no weather.
+void drawClockBar(const String &time, const String &temp, const String &rest);
 
 // --- full-screen calendar (month grid filling the screen) ---
 // While on, drawGrid/drawStatus/hitCalendar use the big geometry. Turn off before

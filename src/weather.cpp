@@ -78,18 +78,21 @@ void update() {
 
   String body;
   String url = "https://api.open-meteo.com/v1/forecast?latitude=" + String(lat, 4) + "&longitude=" + String(lon, 4) +
-               "&current=temperature_2m,relative_humidity_2m,pressure_msl&temperature_unit=fahrenheit";
+               "&current=temperature_2m,relative_humidity_2m,pressure_msl";  // Celsius, hPa
   if (!Net::getString(url, body)) return;
   JsonDocument doc;
   if (deserializeJson(doc, body)) return;
   JsonObject c = doc["current"];
   if (c.isNull()) return;
-  now.tempF = c["temperature_2m"] | 0.0f;
+  now.tempC = c["temperature_2m"] | 0.0f;
+  now.tempF = now.tempC * 9 / 5 + 32;
   now.humidity = c["relative_humidity_2m"] | 0;
-  now.pressureInHg = (c["pressure_msl"] | 0.0f) * 0.0295300f;  // hPa -> inHg
+  now.pressureHpa = c["pressure_msl"] | 0.0f;
+  now.pressureInHg = now.pressureHpa * 0.0295300f;
   now.at = millis();
   now.valid = true;
-  Serial.printf("Weather: %.1fF %d%% %.2f inHg\n", now.tempF, now.humidity, now.pressureInHg);
+  Serial.printf("Weather: %.1fC/%.1fF %d%% %.0f hPa/%.2f inHg\n", now.tempC, now.tempF, now.humidity, now.pressureHpa,
+                now.pressureInHg);
 }
 
 const Now &current() {

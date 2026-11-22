@@ -43,7 +43,14 @@
 #ifndef CATALOG_URL_DEFAULT
 #define CATALOG_URL_DEFAULT "https://raw.githubusercontent.com/rybbit/cyd-pinup-calendar/main/content/catalog.json"
 #endif
-// env=dev fills an empty advertising block with these (set in platformio.ini)
+// Personal settings that aren't committed to the public repo, e.g.
+//   #define DEV_CONTACT "you@example.com"
+#if __has_include("private_config.h")
+#include "private_config.h"
+#endif
+
+// env=dev fills an empty advertising block with these (set in platformio.ini or
+// private_config.h)
 #ifndef DEV_ORGANIZATION
 #define DEV_ORGANIZATION "cyd-pinup-calendar"
 #endif
