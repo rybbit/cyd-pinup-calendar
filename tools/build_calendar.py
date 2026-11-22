@@ -112,11 +112,19 @@ def blur_fit(img: Image.Image, bars: bool = False) -> Image.Image:
     return canvas
 
 
-def top_crop(img: Image.Image, focus_y: float = 0.5) -> Image.Image:
-    """Calendar-page header: a 240xTOP_H crop. focus_y picks the band for tall pictures
-    (0.35 = upper-middle)."""
+def top_crop(img: Image.Image, focus_y="0.5") -> Image.Image:
+    """Calendar-page header, 240xTOP_H. focus_y: a 0-1 crop position for the band
+    (0.35 = upper-middle), or "fit" to show the whole picture with blurred fill above and
+    below (for wide photos such as long guns, which a crop would cut off)."""
     img = ImageOps.exif_transpose(img).convert("RGB")
-    return ImageOps.fit(img, (W, TOP_H), Image.LANCZOS, centering=(0.5, focus_y))
+    if str(focus_y) == "fit":
+        bg = ImageOps.fit(img, (W, TOP_H), Image.LANCZOS).filter(ImageFilter.GaussianBlur(14))
+        canvas = Image.blend(bg, Image.new("RGB", (W, TOP_H), (0, 0, 0)), 0.35)
+        fg = img.copy()
+        fg.thumbnail((W, TOP_H), Image.LANCZOS)
+        canvas.paste(fg, ((W - fg.width) // 2, (TOP_H - fg.height) // 2))
+        return canvas
+    return ImageOps.fit(img, (W, TOP_H), Image.LANCZOS, centering=(0.5, float(focus_y)))
 
 
 def trim_plain_border(img: Image.Image, tol: int = 18, pad: float = 0.06) -> Image.Image:
@@ -309,7 +317,8 @@ def build_manifest(root: Path, manifest: Path, titles: dict, quality: int, expor
     """CSV columns: year, month, image, fit, top, caption
          fit: crop | frame | auto | blur | bars   (how the full-screen picture is made)
          top: blank for none, or a 0-1 vertical focus for a separate calendar-page header
-              (0.5 = center, 0.35 = upper-middle)
+              (0.5 = center, 0.35 = upper-middle), or "fit" for the whole picture with
+              blurred fill (wide photos)
     Each year becomes an edition; months a year doesn't list show the placeholder."""
     import csv
     rows = list(csv.DictReader(manifest.open()))
@@ -326,7 +335,7 @@ def build_manifest(root: Path, manifest: Path, titles: dict, quality: int, expor
         images = [Image.open(Path(r["image"]).expanduser()) for r in rs]
         write_edition(root, year, titles[year], images, [r.get("caption", "") for r in rs], "center",
                       first_month=first, fits=[r["fit"] or "crop" for r in rs],
-                      tops=[float(r["top"]) if r.get("top") else None for r in rs], quality=quality)
+                      tops=[r["top"] if r.get("top") else None for r in rs], quality=quality)
         if export_dir:  # copies named like bwca_2026_10_oct_full.jpg / _top.jpg
             export_dir.mkdir(parents=True, exist_ok=True)
             for r in rs:
