@@ -24,7 +24,7 @@ int COMPANY_CY = 0, ADDR_CY = 0, CONTACT_CY = 0;  // ad line centers, relative t
 bool mottoLine = false;
 
 // Info line state (see "info line" below)
-const uint32_t INFO_MS = 5000;
+const uint32_t INFO_MS = 10000;
 TFT_eSprite infoSprite(&UI::tft);
 bool infoSpriteReady = false;
 String clkTime, clkTemp, clkRest;
