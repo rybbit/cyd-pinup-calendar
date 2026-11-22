@@ -101,14 +101,8 @@ String clockText() {
   return buf;
 }
 
-// Redraws the clock bar when the minute or the weather changes (or force=true after the
-// page redraws).
-void updateClock(bool force = false) {
-  static String shown;
-  if (screen != SCR_CAL) {
-    shown = "";
-    return;
-  }
+// Hands the current time and weather to the info line (it redraws when they change).
+void refreshClockInfo() {
   const Weather::Now &w = Weather::current();
   String temp, rest;
   if (w.valid) {
@@ -117,17 +111,14 @@ void updateClock(bool force = false) {
     rest = String(w.humidity) + "%  " +
            (metric ? String((int)lroundf(w.pressureHpa)) + " hPa" : String(w.pressureInHg, 2) + "\"");
   }
-  String key = clockText() + "|" + temp + "|" + rest;
-  if (key == shown && !force) return;
-  shown = key;
-  UI::drawClockBar(clockText(), temp, rest);
+  UI::setClockInfo(clockText(), temp, rest);
 }
 
 void showCalendar() {
   screen = SCR_CAL;
+  refreshClockInfo();
   UI::drawCalendarPage(series, currentMeta(), viewY, viewM, today, selDay);
   resetStatus();
-  updateClock(true);
 }
 
 // The month grid filling the whole screen.
@@ -162,12 +153,12 @@ void updateStatus() {
     UI::drawGrid(viewY, viewM, today, 0);
     statusNext = 0;
     if (UI::mottoMode() && screen == SCR_CAL) {
-      UI::drawMotto();
+      UI::drawInfoLine();
       lastStatus = "";
     }
   }
-  // On the calendar page with a motto, the bottom line is the motto (holidays show
-  // when a day is tapped). The big calendar always cycles the holidays.
+  // On the calendar page the bottom line is the info line (motto / time; holidays show
+  // when a day is tapped). The big calendar cycles the holidays.
   if (UI::mottoMode() && screen == SCR_CAL) return;
   if (now < statusNext) return;
   statusNext = now + 3500;
@@ -548,6 +539,9 @@ void loop() {
   checkForUpdates();
   if (screen == SCR_CAL || screen == SCR_BIGCAL) updateStatus();
   if (screen == SCR_CAL) Weather::update();
-  updateClock();
+  if (screen == SCR_CAL) {
+    refreshClockInfo();
+    UI::tickInfoLine();
+  }
   delay(10);
 }

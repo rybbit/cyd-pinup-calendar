@@ -8,11 +8,10 @@
 
 // Calendar page layout (portrait 240x320), sized by UI::configureLayout() from the
 // advertising lines in config.txt. Top to bottom:
-//   clock bar (16 px, white: time + outdoor weather)
-//   picture (whatever height is left: 154 px with no advertising lines)
+//   picture (whatever height is left: 184 px with no advertising lines)
 //   advertising block (only the lines that are set)
 //   red header < MONTH >, weekday initials, 6 week rows
-//   status line, or the motto
+//   info line (16 px): motto and time/moon/weather, alternating every 20 s
 namespace Layout {
 // menu
 const int MENU_TITLE_H = 28;
@@ -47,13 +46,13 @@ void drawCalendarPage(const SeriesInfo &s, const CalendarMeta *meta, int year, i
                       int selDay);
 void drawCalendarImage(const SeriesInfo &s, const CalendarMeta *meta, int year, int month);
 void drawGrid(int year, int month, const DateYMD &today, int selDay);
-void drawStatus(const String &text);  // with a motto: temporary text in the motto line
-void drawMotto();
+void drawStatus(const String &text);  // calendar page: temporary text in the info line
+// Calendar page bottom line: alternates motto <-> time/moon/weather every 20 s.
+void setClockInfo(const String &time, const String &temp, const String &rest);
+void drawInfoLine();  // redraw now (also ends a temporary drawStatus text)
+void tickInfoLine();  // call from loop on the calendar page
 CalHit hitCalendar(int16_t x, int16_t y, int year, int month, int &day);
 
-// White bar at the top of the calendar page: time on the left, weather on the right.
-// temp: "47" (a degree sign is drawn after it); rest: "82%  29.85"". Empty temp = no weather.
-void drawClockBar(const String &time, const String &temp, const String &rest);
 
 // --- full-screen calendar (month grid filling the screen) ---
 // While on, drawGrid/drawStatus/hitCalendar use the big geometry. Turn off before

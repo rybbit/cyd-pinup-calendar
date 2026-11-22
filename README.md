@@ -5,7 +5,6 @@ You pick a calendar series (Dogs, Guns, Bikinis, and any you add). Each series h
 
 ```
 ┌────────────────────┐
-│3:47 PM ◐ 41° 65% 30.07"│  clock bar (white, black text): time, moon phase, weather
 │                    │  picture for the month (240x170 window
 │     pin-up art     │  of a 240x320 image, tap for full screen)
 │   Miss November    │
@@ -16,7 +15,7 @@ You pick a calendar series (Dogs, Guns, Bikinis, and any you add). Each series h
 │ 8  9 10 (11)12 13 14│  blue dot = observance (Halloween, Mother's Day…)
 │ …                  │  box = today, tap a day to see its holidays
 ├────────────────────┤
-│Thu Nov 26 Thanksgiv│  edition title, then the month's holidays · tap = back to today
+│Soft or Firm we hav…│  info line: motto ⇅ time ◐ moon · weather, every 20 s
 └────────────────────┘
 ```
 
@@ -102,7 +101,9 @@ You need a FAT32 microSD card. Calendars are stored in `/calendar/<calendar-id>/
 
    **`theme`** (optional, `red`, `blue`, `green` or `black`; default red) colors the month bar, Sunday numbers, holiday fills and buttons. Observance dots use a contrasting color: blue in the Red and Green themes, red in the Blue and Black themes.
 
-   **`location`** (optional) turns on outdoor weather in the clock bar at the top of the calendar page: temperature (°F), humidity and sea-level pressure (inches of mercury) from [Open-Meteo](https://open-meteo.com) (free, no account). Use a US ZIP code (`location=55401`), a place name, or `lat,lon`. Readings refresh every 15 minutes; without a location the bar shows only the time. **`units`** picks `imperial` (°F, inches of mercury; the default) or `metric` (°C, hPa).
+   **Info line.** The bottom line of the calendar page scrolls up every 20 seconds between the motto and the time, moon phase and weather. Without a motto, the time stays. Tapping a day shows its holidays there for a few seconds.
+
+   **`location`** (optional) turns on outdoor weather in the info line at the bottom of the calendar page: temperature (°F), humidity and sea-level pressure (inches of mercury) from [Open-Meteo](https://open-meteo.com) (free, no account). Use a US ZIP code (`location=55401`), a place name, or `lat,lon`. Readings refresh every 15 minutes; without a location only the time shows. **`units`** picks `imperial` (°F, inches of mercury; the default) or `metric` (°C, hPa).
 
    **Big calendar.** Tapping the month name shows the month filling the whole screen, with large numbers and the holidays cycling along the bottom. ◀ ▶ change month and tapping a day shows its holidays. Tap the month name or the bottom line to go back.
 

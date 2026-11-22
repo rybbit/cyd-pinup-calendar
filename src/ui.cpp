@@ -22,6 +22,16 @@ int GRID_Y = 206, ROW_H = 17;
 int STATUS_Y = 308, STATUS_H = 12;
 int COMPANY_CY = 0, ADDR_CY = 0, CONTACT_CY = 0;  // ad line centers, relative to AD_Y
 bool mottoLine = false;
+
+// Info line state (see "info line" below)
+const uint32_t INFO_MS = 20000;
+TFT_eSprite infoSprite(&UI::tft);
+bool infoSpriteReady = false;
+String clkTime, clkTemp, clkRest;
+bool clkDirty = false;
+bool infoClock = false;     // currently showing the time (else the motto)
+bool infoOverride = false;  // a tapped day's holidays are showing
+uint32_t infoSince = 0;
 // Font the motto fits in (configureLayout); the clock bar uses the same one so they match.
 const GFXfont *MOTTO_FF = nullptr;  // a free font, or nullptr for built-in font MOTTO_FONT
 int MOTTO_FONT = 2;
@@ -405,8 +415,8 @@ void configureLayout() {
   bool company = settings.showCompany.length();
   bool addr = settings.showAddress1.length() || settings.showAddress2.length();
   bool contact = settings.showContact.length();
-  mottoLine = settings.adMotto.length();
-  bool any = company || addr || contact || mottoLine;
+  mottoLine = true;  // the bottom line always shows the motto and/or the time
+  bool any = true;
 
   int y = 0;
   if (company || addr || contact) {
@@ -422,8 +432,8 @@ void configureLayout() {
   } else {
     HDR_H = 24, DOW_H = 12, ROW_H = 17;
   }
-  STATUS_H = mottoLine ? 16 : 12;
-  CLOCK_H = 16;
+  STATUS_H = 16;
+  CLOCK_H = 0;  // the time now lives in the bottom line
   IMG_Y = CLOCK_H;
   IMG_H = SCREEN_H - CLOCK_H - AD_H - HDR_H - DOW_H - 6 * ROW_H - STATUS_H;
   AD_Y = IMG_Y + IMG_H;
@@ -431,7 +441,8 @@ void configureLayout() {
   DOW_Y = HDR_Y + HDR_H;
   GRID_Y = DOW_Y + DOW_H;
   STATUS_Y = GRID_Y + 6 * ROW_H;
-  Serial.printf("Layout: picture %d px, ad block %d px, motto %s\n", IMG_H, AD_H, mottoLine ? "yes" : "no");
+  Serial.printf("Layout: picture %d px, ad block %d px, motto %s\n", IMG_H, AD_H,
+                settings.adMotto.length() ? "yes" : "no");
 }
 
 bool mottoMode() { return mottoLine; }
@@ -460,17 +471,17 @@ static int centeredBaseline(const GFXfont *ff, int cy) {
 }
 
 // Draws text in the motto's font: left/center/right aligned (datum: 0/1/2) on line cy.
-static void drawInMottoFont(const String &text, int x, int cy, int align) {
+static void drawInMottoFont(TFT_eSPI &g, const String &text, int x, int cy, int align) {
   if (MOTTO_FF) {
-    tft.setFreeFont(MOTTO_FF);
-    tft.setTextDatum(align == 0 ? L_BASELINE : align == 1 ? C_BASELINE : R_BASELINE);
-    tft.drawString(text, x, centeredBaseline(MOTTO_FF, cy));
-    tft.setTextFont(1);
+    g.setFreeFont(MOTTO_FF);
+    g.setTextDatum(align == 0 ? L_BASELINE : align == 1 ? C_BASELINE : R_BASELINE);
+    g.drawString(text, x, centeredBaseline(MOTTO_FF, cy));
+    g.setTextFont(1);
   } else {
-    tft.setTextDatum(align == 0 ? ML_DATUM : align == 1 ? MC_DATUM : MR_DATUM);
-    tft.drawString(text, x, cy, MOTTO_FONT);
+    g.setTextDatum(align == 0 ? ML_DATUM : align == 1 ? MC_DATUM : MR_DATUM);
+    g.drawString(text, x, cy, MOTTO_FONT);
   }
-  tft.setTextDatum(MC_DATUM);
+  g.setTextDatum(MC_DATUM);
 }
 
 static int mottoFontWidth(const String &text) {
@@ -491,14 +502,8 @@ static void pickMottoFont() {
   MOTTO_FONT = tft.textWidth(m, 2) <= maxW ? 2 : 1;
 }
 
-void drawMotto() {
-  tft.fillRect(0, STATUS_Y, SCREEN_W, STATUS_H, PAPER);
-  if (settings.adMotto.isEmpty()) return;
-  tft.setTextColor(TFT_BLACK);
-  drawInMottoFont(settings.adMotto, SCREEN_W / 2, STATUS_Y + STATUS_H / 2, 1);
-}
-
 void drawStatus(const String &text) {
+  if (!bigCal) infoOverride = true;  // a tapped day's holidays; drawInfoLine() resumes
   if (mottoLine || bigCal) {
     tft.fillRect(0, STATUS_Y, SCREEN_W, STATUS_H, PAPER_DARK);
     tft.setTextColor(INK);
@@ -518,7 +523,7 @@ void drawCalendarPage(const SeriesInfo &s, const CalendarMeta *meta, int year, i
   if (AD_H) drawAd();
   drawHeader(year, month);
   drawGrid(year, month, today, selDay);
-  if (mottoLine) drawMotto();
+  drawInfoLine();
 }
 
 CalHit hitCalendar(int16_t x, int16_t y, int year, int month, int &day) {
@@ -556,8 +561,8 @@ static float moonPhase(time_t now) {
 
 // Moon icon (radius r at cx,cy): the lit part filled row by row, as seen from the
 // Northern Hemisphere (waxing lit on the right, waning on the left), black outline.
-static void drawMoon(int cx, int cy, int r, float phase, uint16_t lit, uint16_t dark) {
-  tft.fillCircle(cx, cy, r, dark);
+static void drawMoon(TFT_eSPI &g, int cx, int cy, int r, float phase, uint16_t lit, uint16_t dark) {
+  g.fillCircle(cx, cy, r, dark);
   float c = cosf(2 * PI * phase);
   for (int dy = -r; dy <= r; dy++) {
     float w = sqrtf((float)(r * r - dy * dy));
@@ -570,31 +575,97 @@ static void drawMoon(int cx, int cy, int r, float phase, uint16_t lit, uint16_t 
       x1 = -w * c;
     }
     int a = (int)lroundf(x0), b = (int)lroundf(x1);
-    if (b > a) tft.drawFastHLine(cx + a, cy + dy, b - a + 1, lit);
+    if (b > a) g.drawFastHLine(cx + a, cy + dy, b - a + 1, lit);
   }
-  tft.drawCircle(cx, cy, r, TFT_BLACK);
+  g.drawCircle(cx, cy, r, TFT_BLACK);
 }
 
-void drawClockBar(const String &time, const String &temp, const String &rest) {
-  if (!CLOCK_H) return;
-  int cy = CLOCK_H / 2;
-  tft.fillRect(0, 0, SCREEN_W, CLOCK_H, TFT_WHITE);
-  tft.setTextColor(TFT_BLACK);
-  drawInMottoFont(time, 6, cy, 0);
-  if (time.length()) {  // moon just right of the time (the clock is set, so the date is known)
-    int x = 6 + mottoFontWidth(time) + 12;
-    drawMoon(x, cy, 6, moonPhase(::time(nullptr)), tft.color565(255, 224, 120), tft.color565(110, 110, 110));
+// ---------------------------------------------------------------- info line
+// The calendar page's bottom line alternates every INFO_MS between the motto and the
+// time / moon / weather, scrolling up from one to the other. Without a motto it just
+// shows the time. Frames are drawn in a 240x16 sprite so the scroll doesn't flicker.
+
+
+static void renderMotto(TFT_eSPI &g, int cy) {
+  g.setTextColor(TFT_BLACK);
+  drawInMottoFont(g, settings.adMotto, SCREEN_W / 2, cy, 1);
+}
+
+// Time and moon on the left, weather on the right ("47°  82%  29.85"").
+static void renderClock(TFT_eSPI &g, int cy) {
+  g.setTextColor(TFT_BLACK);
+  if (clkTime.length()) {
+    drawInMottoFont(g, clkTime, 6, cy, 0);
+    int x = 6 + mottoFontWidth(clkTime) + 12;
+    drawMoon(g, x, cy, 6, moonPhase(::time(nullptr)), tft.color565(255, 224, 120), tft.color565(110, 110, 110));
   }
-  if (temp.length()) {
-    // "47°  82%  29.85"" right-aligned; the fonts have no degree sign, so draw one.
-    int xRest = SCREEN_W - 6 - mottoFontWidth(rest);
+  if (clkTemp.length()) {
+    int xRest = SCREEN_W - 6 - mottoFontWidth(clkRest);
     int xDeg = xRest - 12;
-    drawInMottoFont(temp, xDeg - 1, cy, 2);
+    drawInMottoFont(g, clkTemp, xDeg - 1, cy, 2);
     int degY = MOTTO_FF ? centeredBaseline(MOTTO_FF, cy) + MOTTO_FF->glyph['0' - MOTTO_FF->first].yOffset + 2
-                        : cy - 4;  // top of the digits
-    tft.drawCircle(xDeg + 2, degY, 2, TFT_BLACK);
-    drawInMottoFont(rest, xRest, cy, 0);
+                        : cy - 4;  // top of the digits; the fonts have no degree sign
+    g.drawCircle(xDeg + 2, degY, 2, TFT_BLACK);
+    drawInMottoFont(g, clkRest, xRest, cy, 0);
   }
+}
+
+static void renderInfo(TFT_eSPI &g, bool clock, int cy) {
+  if (clock) renderClock(g, cy);
+  else renderMotto(g, cy);
+}
+
+static bool ensureSprite() {
+  if (!infoSpriteReady) infoSpriteReady = infoSprite.createSprite(SCREEN_W, 16) != nullptr;
+  return infoSpriteReady;
+}
+
+void setClockInfo(const String &time, const String &temp, const String &rest) {
+  if (time == clkTime && temp == clkTemp && rest == clkRest) return;
+  clkTime = time;
+  clkTemp = temp;
+  clkRest = rest;
+  clkDirty = true;
+}
+
+void drawInfoLine() {
+  infoOverride = false;
+  clkDirty = false;
+  if (settings.adMotto.isEmpty()) infoClock = true;
+  if (ensureSprite() && STATUS_H == 16) {
+    infoSprite.fillSprite(PAPER);
+    renderInfo(infoSprite, infoClock, 8);
+    infoSprite.pushSprite(0, STATUS_Y);
+  } else {
+    tft.fillRect(0, STATUS_Y, SCREEN_W, STATUS_H, PAPER);
+    renderInfo(tft, infoClock, STATUS_Y + STATUS_H / 2);
+  }
+}
+
+void tickInfoLine() {
+  if (bigCal || infoOverride) return;
+  uint32_t now = millis();
+  if (settings.adMotto.isEmpty()) {  // nothing to alternate with: the time stays
+    if (!infoClock || clkDirty) drawInfoLine();
+    return;
+  }
+  if (now - infoSince >= INFO_MS) {
+    bool next = !infoClock;
+    if (ensureSprite() && STATUS_H == 16) {
+      for (int k = 1; k <= 16; k++) {  // current line slides up and out, next slides in
+        infoSprite.fillSprite(PAPER);
+        renderInfo(infoSprite, infoClock, 8 - k);
+        renderInfo(infoSprite, next, 24 - k);
+        infoSprite.pushSprite(0, STATUS_Y);
+        delay(14);
+      }
+    }
+    infoClock = next;
+    infoSince = now;
+    drawInfoLine();
+    return;
+  }
+  if (infoClock && clkDirty) drawInfoLine();
 }
 
 // ---------------------------------------------------------------- full-screen calendar
