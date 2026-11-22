@@ -5,7 +5,7 @@ You pick a calendar series (Dogs, Guns, Bikinis, and any you add). Each series h
 
 ```
 ┌────────────────────┐
-│3:47 PM  41° 65% 30.07"│  clock bar: time + outdoor weather
+│3:47 PM ◐ 41° 65% 30.07"│  clock bar (navy): time, moon phase, outdoor weather
 │                    │  picture for the month (240x170 window
 │     pin-up art     │  of a 240x320 image, tap for full screen)
 │   Miss November    │

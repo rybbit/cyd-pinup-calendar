@@ -517,12 +517,45 @@ CalHit hitCalendar(int16_t x, int16_t y, int year, int month, int &day) {
 
 // White bar across the top of the calendar page: the time on the left, outdoor weather
 // (if any) on the right, in the motto's navy serif italic.
+// Moon phase 0..1 (0 = new, 0.25 = first quarter, 0.5 = full, 0.75 = last quarter),
+// counted from the new moon of 2000-01-06 18:14 UTC. Good to a few hours.
+static float moonPhase(time_t now) {
+  const double SYNODIC = 29.530588853, EPOCH = 947182440;  // seconds since 1970
+  double cycles = (now - EPOCH) / 86400.0 / SYNODIC;
+  return (float)(cycles - floor(cycles));
+}
+
+// Moon icon (radius r at cx,cy): the lit part filled row by row, as seen from the
+// Northern Hemisphere (waxing lit on the right, waning on the left).
+static void drawMoon(int cx, int cy, int r, float phase, uint16_t lit, uint16_t dark) {
+  tft.fillCircle(cx, cy, r, dark);
+  float c = cosf(2 * PI * phase);
+  for (int dy = -r; dy <= r; dy++) {
+    float w = sqrtf((float)(r * r - dy * dy));
+    float x0, x1;  // lit span
+    if (phase < 0.5f) {
+      x0 = w * c;  // waxing: terminator moves right-to-left
+      x1 = w;
+    } else {
+      x0 = -w;  // waning: lit part shrinks toward the left limb
+      x1 = -w * c;
+    }
+    int a = (int)lroundf(x0), b = (int)lroundf(x1);
+    if (b > a) tft.drawFastHLine(cx + a, cy + dy, b - a + 1, lit);
+  }
+  tft.drawCircle(cx, cy, r, lit);
+}
+
 void drawClockBar(const String &time, bool haveWeather, int tempF, int humidity, float inHg) {
   if (!CLOCK_H) return;
   int cy = CLOCK_H / 2;
-  tft.fillRect(0, 0, SCREEN_W, CLOCK_H, TFT_WHITE);
-  tft.setTextColor(NAVY);
+  tft.fillRect(0, 0, SCREEN_W, CLOCK_H, NAVY);
+  tft.setTextColor(TFT_WHITE);
   drawInMottoFont(time, 6, cy, 0);
+  if (time.length()) {  // moon just right of the time (the clock is set, so the date is known)
+    int x = 6 + mottoFontWidth(time) + 12;
+    drawMoon(x, cy, 6, moonPhase(::time(nullptr)), tft.color565(255, 236, 170), tft.color565(52, 62, 110));
+  }
   if (haveWeather) {
     // "47°  82%  29.85"" right-aligned; the fonts have no degree sign, so draw one.
     String rest = String(humidity) + "%  " + String(inHg, 2) + "\"";
@@ -532,7 +565,7 @@ void drawClockBar(const String &time, bool haveWeather, int tempF, int humidity,
     drawInMottoFont(temp, xDeg - 1, cy, 2);
     int degY = MOTTO_FF ? centeredBaseline(MOTTO_FF, cy) + MOTTO_FF->glyph['0' - MOTTO_FF->first].yOffset + 2
                         : cy - 4;  // top of the digits
-    tft.drawCircle(xDeg + 2, degY, 2, NAVY);
+    tft.drawCircle(xDeg + 2, degY, 2, TFT_WHITE);
     drawInMottoFont(rest, xRest, cy, 0);
   }
 }
