@@ -15,7 +15,7 @@ You pick a calendar series (Dogs, Guns, Bikinis, and any you add). Each series h
 │ 8  9 10 (11)12 13 14│  blue dot = observance (Halloween, Mother's Day…)
 │ …                  │  box = today, tap a day to see its holidays
 ├────────────────────┤
-│Soft or Firm we hav…│  info line: motto ⇅ time ◐ moon · weather, every 20 s
+│Soft or Firm we hav…│  info line: motto ⇅ time ◐ moon · weather, every 5 s
 └────────────────────┘
 ```
 
@@ -101,7 +101,7 @@ You need a FAT32 microSD card. Calendars are stored in `/calendar/<calendar-id>/
 
    **`theme`** (optional, `red`, `blue`, `green` or `black`; default red) colors the month bar, Sunday numbers, holiday fills and buttons. Observance dots use a contrasting color: blue in the Red and Green themes, red in the Blue and Black themes.
 
-   **Info line.** The bottom line of the calendar page scrolls up every 20 seconds between the motto and the time, moon phase and weather. Without a motto, the time stays. Tapping a day shows its holidays there for a few seconds.
+   **Info line.** The bottom line of the calendar page scrolls up every 5 seconds between the motto and the time, moon phase and weather. Without a motto, the time stays. Tapping a day shows its holidays there for a few seconds.
 
    **`location`** (optional) turns on outdoor weather in the info line at the bottom of the calendar page: temperature (°F), humidity and sea-level pressure (inches of mercury) from [Open-Meteo](https://open-meteo.com) (free, no account). Use a US ZIP code (`location=55401`), a place name, or `lat,lon`. Readings refresh every 15 minutes; without a location only the time shows. **`units`** picks `imperial` (°F, inches of mercury; the default) or `metric` (°C, hPa).
 

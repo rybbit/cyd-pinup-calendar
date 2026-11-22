@@ -24,7 +24,7 @@ int COMPANY_CY = 0, ADDR_CY = 0, CONTACT_CY = 0;  // ad line centers, relative t
 bool mottoLine = false;
 
 // Info line state (see "info line" below)
-const uint32_t INFO_MS = 20000;
+const uint32_t INFO_MS = 5000;
 TFT_eSprite infoSprite(&UI::tft);
 bool infoSpriteReady = false;
 String clkTime, clkTemp, clkRest;
@@ -418,13 +418,29 @@ void configureLayout() {
   mottoLine = true;  // the bottom line always shows the motto and/or the time
   bool any = true;
 
+  // Stack the lines that are set with even gaps between their visible text.
+  //   organization: bold 9pt drawn on its baseline (caps 13 px, descenders 3 px)
+  //   address line: built-in font 1 (8 px)
+  //   contact:      built-in font 2 (capitals about 10 px)
+  const int GAP = 4;
   int y = 0;
   if (company || addr || contact) {
-    y = 2;
-    if (company) { COMPANY_CY = y + 9; y += 18; }
-    if (addr) { ADDR_CY = y + 5; y += 10; }
-    if (contact) { CONTACT_CY = y + 7; y += 14; }
-    y += 2;
+    y = 3;
+    if (company) {
+      COMPANY_CY = y + 12;  // baseline
+      y = COMPANY_CY + 4;   // below the descenders
+    }
+    if (addr) {
+      if (company) y += GAP;
+      ADDR_CY = y + 4;
+      y += 8;
+    }
+    if (contact) {
+      if (company || addr) y += GAP;
+      CONTACT_CY = y + 6;
+      y += 12;
+    }
+    y += 3;
   }
   AD_H = y;
   if (any) {  // shorter calendar rows to make room
@@ -452,8 +468,17 @@ static void drawAd() {
   tft.fillRect(0, AD_Y, SCREEN_W, AD_H, PAPER);
   tft.drawFastHLine(0, AD_Y, SCREEN_W, GRIDLINE);
   tft.setTextColor(INK);
-  if (settings.showCompany.length())
-    drawFitted(settings.showCompany, SCREEN_W / 2, AD_Y + COMPANY_CY, &FreeSansBold9pt7b);
+  if (settings.showCompany.length()) {  // on its baseline, so descenders don't push it down
+    tft.setFreeFont(&FreeSansBold9pt7b);
+    if (tft.textWidth(settings.showCompany) <= SCREEN_W - 8) {
+      tft.setTextDatum(C_BASELINE);
+      tft.drawString(settings.showCompany, SCREEN_W / 2, AD_Y + COMPANY_CY);
+      tft.setTextFont(1);
+    } else {
+      tft.setTextFont(1);
+      drawFitted(settings.showCompany, SCREEN_W / 2, AD_Y + COMPANY_CY - 6, nullptr);
+    }
+  }
   String addr = settings.showAddress1;
   if (addr.length() && settings.showAddress2.length()) addr += "    ";
   addr += settings.showAddress2;

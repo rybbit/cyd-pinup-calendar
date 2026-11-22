@@ -11,7 +11,7 @@
 //   picture (whatever height is left: 184 px with no advertising lines)
 //   advertising block (only the lines that are set)
 //   red header < MONTH >, weekday initials, 6 week rows
-//   info line (16 px): motto and time/moon/weather, alternating every 20 s
+//   info line (16 px): motto and time/moon/weather, alternating every 5 s
 namespace Layout {
 // menu
 const int MENU_TITLE_H = 28;
@@ -47,7 +47,7 @@ void drawCalendarPage(const SeriesInfo &s, const CalendarMeta *meta, int year, i
 void drawCalendarImage(const SeriesInfo &s, const CalendarMeta *meta, int year, int month);
 void drawGrid(int year, int month, const DateYMD &today, int selDay);
 void drawStatus(const String &text);  // calendar page: temporary text in the info line
-// Calendar page bottom line: alternates motto <-> time/moon/weather every 20 s.
+// Calendar page bottom line: alternates motto <-> time/moon/weather every 5 s.
 void setClockInfo(const String &time, const String &temp, const String &rest);
 void drawInfoLine();  // redraw now (also ends a temporary drawStatus text)
 void tickInfoLine();  // call from loop on the calendar page
